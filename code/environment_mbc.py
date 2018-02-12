@@ -27,9 +27,6 @@ class Env:
     reset()
         resets the simulation to initial state to repeat the simulation.
 
-    reward()
-        set the reward function --> User Supplied
-
     """
     def __init__(self,
             input_file,
@@ -75,7 +72,3 @@ class Env:
         for f in self.state_space["flows"]:
             new_states.append(self.sim._model.getLinkResult(f, 0))
         return np.asarray([new_states])
-
-
-    def reward(self):
-        return 0.0
