@@ -49,12 +49,10 @@ class Env:
 
         done = True if time <= 0 else False
 
-        #
-        reward = self.reward()
         # Read the new states
         new_states = self.states()
 
-        return new_states, reward, done
+        return new_states, done
 
     def reset(self):
         # Close the current simulation
