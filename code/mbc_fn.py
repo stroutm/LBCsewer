@@ -22,3 +22,8 @@ def mbc(state, setptOutflow, beta, epsilon, max_depths, n_tanks, action):
             action[i] = 1
 
     return p, PD, PS, tot_flow, action
+
+def perf(total_flow, setptOutflow):
+    flow_over = (total_flow-setptOutflow*np.ones(len(total_flow)))*((total_flow-setptOutflow*np.ones(len(total_flow)))>0)
+
+    return flow_over

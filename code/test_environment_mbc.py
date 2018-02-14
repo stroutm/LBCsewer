@@ -1,6 +1,7 @@
 from environment_mbc import Env
-from mbc_fn import mbc
+from mbc_fn import mbc, perf
 import matplotlib.pyplot as plt
+import numpy as np
 
 record1 = []
 record2 = []
@@ -10,6 +11,8 @@ supply = []
 total_flow1 = []
 total_flow2 = []
 gates = []
+beta = 1.0; epsilon = 0.0
+setptOutflow = 2.5
 
 state_space = {"depths":["V-1","V-2","V-3"],
     "flows":["C-7","C-8","C-9"]}
@@ -25,16 +28,17 @@ done = False
 while not done:
     state, done = env.step([1.0,1.0,1.0])
     record1.append(state[0])
-    tot_flow = sum(state[0,n_tanks:2*n_tanks])
+    tot_flow = sum(state[0,n_tanks:-1])
     total_flow1.append(tot_flow)
+
+flow_over1 = perf(total_flow1,setptOutflow)
 
 print("Done")
 env.reset()
 
 done = False
 action = [0.5,0.5,0.5]
-beta = 1.0; epsilon = 7.0
-setptOutflow = 2.5
+
 while not done:
     state, done = env.step(action)
     record2.append(state[0])
@@ -48,6 +52,11 @@ while not done:
     demand.append(PD)
     supply.append(PS)
     total_flow2.append(tot_flow)
+
+flow_over2 = perf(total_flow2, setptOutflow)
+
+print("No control flow over: " + str(sum(flow_over1)))
+print("MB control flow over: " + str(sum(flow_over2)))
 
 plt.subplot(1,3,1)
 plt.plot(record1)
