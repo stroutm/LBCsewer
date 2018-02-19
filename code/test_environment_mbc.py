@@ -8,8 +8,8 @@ tanks1 = []
 total_flow1 = []
 flow_over_cum = []
 
-beta = 1.0; epsilons = range(0,11,2)
-setptOutflow = 2.5
+beta = 1.0; epsilons = [0.0, 1.0, 10.0]
+setptOutflow = 2.0
 
 state_space = {"depths":["V-1","V-2","V-3"],
     "flows":["C-7","C-8","C-9"]}
@@ -31,12 +31,12 @@ while not done:
 
 flow_over = perf(total_flow1,setptOutflow)
 
-plt.subplot(131)
+plt.subplot(231)
 for i in range(0,n_tanks):
     plt.plot(max_depths[i]*np.ones(len(tanks1)), label = "Setpoint for tank " + str(i+1))
 plt.plot(tanks1)
 
-plt.subplot(132)
+plt.subplot(232)
 plt.plot(setptOutflow*np.ones(len(total_flow1)), label = "Setpoint")
 plt.plot(total_flow1, label = "No control")
 
@@ -77,23 +77,44 @@ for epsilon in epsilons:
     print("MB control (epsilon = " + str(epsilon) + ") flow over: "
         + str(sum(flow_over)))
 
-    plt.subplot(131)
+    plt.subplot(231)
     plt.plot(tanks2)
 
-    plt.subplot(132)
+    plt.subplot(232)
     plt.plot(total_flow2, label = "MBC, epsilon = " + str(epsilon))
 
-plt.subplot(131)
+    plt.subplot(234)
+    plt.plot(price, label = "MBC, epsilon = " + str(epsilon))
+
+    plt.subplot(235)
+    plt.plot(demand, label = "MBC, epsilon = " + str(epsilon))
+
+    plt.subplot(236)
+    plt.plot(gates, label = "MBC, epsilon = " + str(epsilon))
+
+plt.subplot(231)
 plt.ylabel('Tank Depth')
 plt.legend()
 
-plt.subplot(132)
+plt.subplot(232)
 plt.ylabel('Total Outflow')
 plt.legend()
 
-plt.subplot(133)
+plt.subplot(233)
 plt.plot(epsilons,flow_over_cum)
 plt.xlabel('Epsilon')
 plt.ylabel('Total Outflow over Setpoint')
+
+plt.subplot(234)
+plt.ylabel('Price')
+plt.legend()
+
+plt.subplot(235)
+plt.ylabel('Demand')
+plt.legend()
+
+plt.subplot(236)
+plt.ylabel('Gate opening')
+plt.legend()
 
 plt.show()
