@@ -1,9 +1,9 @@
 import numpy as np
 
-def mbc(state, setptOutflow, beta, epsilon, max_depths, n_tanks, action):
+def mbc(state, TSSload, setptOutflow, setptTSSload, beta, epsilon, zeta, max_depths, n_tanks, action):
     tot_flow = sum(state[0,n_tanks:2*n_tanks])
     p = (sum(beta*state[0,0:n_tanks]/max_depths)
-        + epsilon*(tot_flow-setptOutflow))/(1 + n_tanks)
+        + epsilon*(tot_flow-setptOutflow) + zeta*(TSSload-setptTSSload))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + beta*state[0,i]/max_depths[i],0)
@@ -23,8 +23,11 @@ def mbc(state, setptOutflow, beta, epsilon, max_depths, n_tanks, action):
 
     return p, PD, PS, tot_flow, action
 
-def perf(total_flow, setptOutflow):
+def perf(total_flow, setptOutflow, TSSload, setptTSSload):
     x = total_flow-setptOutflow*np.ones(len(total_flow))
     flow_over = x*(x>0)
 
-    return flow_over
+    x = TSSload-setptTSSload*np.ones(len(TSSload))
+    TSS_over = x*(x>0)
+
+    return flow_over, TSS_over
