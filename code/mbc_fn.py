@@ -23,6 +23,24 @@ def mbc(state, TSSload, setptOutflow, setptTSSload, beta, epsilon, zeta, max_dep
 
     return p, PD, PS, tot_flow, action
 
+def mbc_bin(state, TSSload, setptOutflow, setptTSSload, beta, epsilon, zeta, max_depths, n_tanks, action):
+    tot_flow = sum(state[0,n_tanks:2*n_tanks])
+    p = (sum(beta*state[0,0:n_tanks]/max_depths)
+        + epsilon*(tot_flow-setptOutflow) + zeta*(TSSload-setptTSSload))/(1 + n_tanks)
+    PD = np.zeros(n_tanks)
+    for i in range(0,n_tanks):
+        PD[i] = max(-p + beta*state[0,i]/max_depths[i],0)
+    PS = sum(PD)
+    for i in range(0,n_tanks):
+        if PD[i] >= p:
+            action[i] = 1
+        else:
+            action[i] = 0 # 0.1424 is area equivalent to 80% filled from bottom
+        if state[0,i]/max_depths[i] > 0.95:
+            action[i] = 1
+
+    return p, PD, PS, tot_flow, action
+
 def perf(total_flow, setptOutflow, TSSload, setptTSSload):
     x = total_flow-setptOutflow*np.ones(len(total_flow))
     flow_over = x*(x>0)

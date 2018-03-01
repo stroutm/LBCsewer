@@ -1,7 +1,10 @@
 from environment_mbc import Env
-from mbc_fn import mbc, perf
+from mbc_fn import mbc, mbc_bin, perf
 import matplotlib.pyplot as plt
 import numpy as np
+
+results = []
+plot = 1
 
 record1 = []
 tanks1 = []
@@ -10,7 +13,7 @@ TSSload = []
 flow_over_cum = []
 TSS_over_cum = []
 
-beta = 1.0; epsilons = [0.0,10.0]; zetas = [0.0,10.0]
+beta = 1.0; epsilons = [0.5]; zetas = [0.0]
 setptOutflow = 2.5
 setptTSSload = 70
 
@@ -45,21 +48,21 @@ while not done:
 
 flow_over,TSS_over = perf(total_flow1,setptOutflow,TSSload,setptTSSload)
 
-plt.subplot(231)
-for i in range(0,n_tanks):
-    plt.plot(max_depths[i]*np.ones(len(tanks1)), label = "Setpoint for tank " + str(i+1))
-plt.plot(tanks1)
+if plot == 1:
+    plt.subplot(231)
+    for i in range(0,n_tanks):
+        plt.plot(max_depths[i]*np.ones(len(tanks1)), label = "Setpoint for tank " + str(i+1))
+    plt.plot(tanks1)
 
-plt.subplot(232)
-plt.plot(setptOutflow*np.ones(len(total_flow1)), label = "Setpoint")
-plt.plot(total_flow1, label = "No control")
+    plt.subplot(232)
+    plt.plot(setptOutflow*np.ones(len(total_flow1)), label = "Setpoint")
+    plt.plot(total_flow1, label = "No control")
 
-plt.subplot(233)
-plt.plot(setptTSSload*np.ones(len(TSSload)), label = "Setpoint")
-plt.plot(TSSload, label = "No control")
+    plt.subplot(233)
+    plt.plot(setptTSSload*np.ones(len(TSSload)), label = "Setpoint")
+    plt.plot(TSSload, label = "No control")
 
-print("No control flow over: " + str(sum(flow_over)))
-print("No control TSS over: " + str(sum(TSS_over)))
+#print("No control flow/TSS over: " + str(sum(flow_over)) + ", " + str(sum(TSS_over)))
 
 for epsilon in epsilons:
     for zeta in zetas:
@@ -93,7 +96,7 @@ for epsilon in epsilons:
                 TSSL[i] = TSSCT[i] * state[0][n_tanks+i]
             TSSload.append(sum(TSSL))
 
-            p, PD, PS, tot_flow, action = mbc(state, TSSload[-1],
+            p, PD, PS, tot_flow, action = mbc_bin(state, TSSload[-1],
                 setptOutflow, setptTSSload, beta, epsilon, zeta, max_depths,
                 n_tanks, action)
 
@@ -107,49 +110,52 @@ for epsilon in epsilons:
         flow_over_cum.append(sum(flow_over))
         TSS_over_cum.append(sum(TSS_over))
 
-        print("MB control (epsilon = " + str(epsilon) + ", zeta = " + str(zeta) + ") flow over: "
-            + str(sum(flow_over)))
-        print("MB control (epsilon = " + str(epsilon) + ", zeta = " + str(zeta) + ") TSS over: "
-            + str(sum(TSS_over)))
+        results.append([epsilon, zeta, sum(flow_over), sum(TSS_over)])
+        #print("MB control (epsilon = " + str(epsilon) + ", zeta = " + str(zeta) + ") flow/TSS over: "
+        #    + str(sum(flow_over)) + ", " + str(sum(TSS_over)))
 
-        plt.subplot(231)
-        plt.plot(tanks2)
+        if plot == 1:
+            plt.subplot(231)
+            plt.plot(tanks2)
 
-        plt.subplot(232)
-        plt.plot(total_flow2, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+            plt.subplot(232)
+            plt.plot(total_flow2, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
-        plt.subplot(233)
-        plt.plot(TSSload, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+            plt.subplot(233)
+            plt.plot(TSSload, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
-        plt.subplot(234)
-        plt.plot(price, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+            plt.subplot(234)
+            plt.plot(price, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
-        plt.subplot(235)
-        plt.plot(demand, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+            plt.subplot(235)
+            plt.plot(demand, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
-        plt.subplot(236)
-        plt.plot(gates, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+            plt.subplot(236)
+            plt.plot(gates, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
-plt.subplot(231)
-plt.ylabel('Tank Depth')
-plt.legend()
+if plot == 1:
+    plt.subplot(231)
+    plt.ylabel('Tank Depth')
+    plt.legend()
 
-plt.subplot(232)
-plt.ylabel('Total Outflow')
-plt.legend()
+    plt.subplot(232)
+    plt.ylabel('Total Outflow')
+    plt.legend()
 
-plt.subplot(233)
-plt.ylabel('TSS Loading')
-plt.legend()
+    plt.subplot(233)
+    plt.ylabel('TSS Loading')
+    plt.legend()
 
-plt.subplot(234)
-plt.ylabel('Price')
-plt.legend()
+    plt.subplot(234)
+    plt.ylabel('Price')
+    plt.legend()
 
-plt.subplot(235)
-plt.ylabel('Demand')
+    plt.subplot(235)
+    plt.ylabel('Demand')
 
-plt.subplot(236)
-plt.ylabel('Gate opening')
+    plt.subplot(236)
+    plt.ylabel('Gate opening')
 
-plt.show()
+    plt.show()
+
+np.savetxt("../data/results/res.csv",results,delimiter=',')
