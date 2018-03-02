@@ -1,5 +1,5 @@
 from environment_mbc import Env
-from mbc_fn import mbc, mbc_bin, perf
+from mbc_fn import mbc, mbc_bin, perf, TSScalc
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -7,10 +7,9 @@ results = []
 plot = 1
 TSS = 0
 
-record1 = []
-tanks1 = []
-total_flow1 = []
-TSSload = []
+tank_depths = []
+total_flow = []
+TSS_load = []
 flow_over_cum = []
 TSS_over_cum = []
 
@@ -28,84 +27,71 @@ env = Env("../data/input_files/tanks_TSS_flooding.inp",
     state_space,
     control_points)
 
-done = False
+done = False; j = 0
 while not done:
+    j += 1
     state, done = env.step([1.0,1.0,1.0])
-    record1.append(state[0])
-    tanks1.append(state[0][0:n_tanks])
+    tank_depths.append(state[0][0:n_tanks])
     tot_flow = sum(state[0,n_tanks:2*n_tanks])
-    total_flow1.append(tot_flow)
-    TSSCT = [0.0,0.0,0.0]
-    TSSL = [0.0,0.0,0.0]
+    total_flow.append(tot_flow)
     if TSS == 1:
-        for i in range(0,n_tanks):
-            runoff = 10
-            TSSconcrunoff = 1000
-            if tanks1[-1][i] > 0.01:
-                TSSCT[i] = (30*TSSconcrunoff*runoff/(30*state[0][n_tanks+i]+2000*tanks1[-1][i])) * np.exp(-0.05/((tanks1[-2][i]+tanks1[-1][i])/2)*30)
-            else:
-                TSSCT[i] = 0.0
-            TSSL[i] = TSSCT[i] * state[0][n_tanks+i]
-        TSSload.append(sum(TSSL))
+        if j == 1:
+            TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks])
+        else:
+            TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks])
+        TSS_load.append(sum(TSSL))
 
-        TSS_over = perf(TSSload,setptTSSload)
+        TSS_over = perf(TSS_load,setptTSSload)
     else:
         TSS_over = 0
 
-flow_over = perf(total_flow1,setptOutflow)
+flow_over = perf(total_flow,setptOutflow)
 
 if plot == 1:
     plt.subplot(231)
     for i in range(0,n_tanks):
-        plt.plot(max_depths[i]*np.ones(len(tanks1)), label = "Setpoint for tank " + str(i+1))
-    plt.plot(tanks1)
+        plt.plot(max_depths[i]*np.ones(len(tank_depths)), label = "Setpoint for tank " + str(i+1))
+    plt.plot(tank_depths)
 
     plt.subplot(232)
-    plt.plot(setptOutflow*np.ones(len(total_flow1)), label = "Setpoint")
-    plt.plot(total_flow1, label = "No control")
+    plt.plot(setptOutflow*np.ones(len(total_flow)), label = "Setpoint")
+    plt.plot(total_flow, label = "No control")
 
     if TSS == 1:
         plt.subplot(233)
-        plt.plot(setptTSSload*np.ones(len(TSSload)), label = "Setpoint")
-        plt.plot(TSSload, label = "No control")
+        plt.plot(setptTSSload*np.ones(len(TSS_load)), label = "Setpoint")
+        plt.plot(TSS_load, label = "No control")
 
 for epsilon in epsilons:
     for zeta in zetas:
         env.reset()
 
-        record2 = []
-        tanks2 = []
+        tank_depths = []
         price = []
         demand = []
         supply = []
-        total_flow2 = []
-        TSSload = []
+        total_flow = []
+        TSS_load = []
         gates = []
 
-        done = False
+        done = False; j = 0
         action = [0.5,0.5,0.5]
 
         while not done:
+            j += 1
             state, done = env.step(action)
-            record2.append(state[0])
-            tanks2.append(state[0][0:n_tanks])
-            TSSCT = [0.0,0.0,0.0]
-            TSSL = [0.0,0.0,0.0]
+            tank_depths.append(state[0][0:n_tanks])
             if TSS == 1:
-                for i in range(0,n_tanks):
-                    runoff = 10
-                    TSSconcrunoff = 1000
-                    if tanks2[-1][i] > 0.01:
-                        TSSCT[i] = (30*TSSconcrunoff*runoff/(30*state[0][n_tanks+i]+2000*tanks2[-1][i])) * np.exp(-0.05/((tanks2[-2][i]+tanks2[-1][i])/2)*30)
-                    else:
-                        TSSCT[i] = 0.0
-                    TSSL[i] = TSSCT[i] * state[0][n_tanks+i]
-                TSSload.append(sum(TSSL))
+                if j == 1:
+                    TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks])
+                else:
+                    TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks])
+                TSS_load.append(sum(TSSL))
             else:
-                TSSload = np.zeros(n_tanks)
+                TSS_load = np.zeros(n_tanks)
                 zeta = 0.0
 
-            p, PD, PS, tot_flow, action = mbc(state, TSSload[-1],
+            p, PD, PS, tot_flow, action = mbc(state, TSS_load[-1],
                 setptOutflow, setptTSSload, beta, epsilon, zeta, max_depths,
                 n_tanks, action)
 
@@ -113,31 +99,29 @@ for epsilon in epsilons:
             price.append(p)
             demand.append(PD)
             supply.append(PS)
-            total_flow2.append(tot_flow)
+            total_flow.append(tot_flow)
 
         if TSS == 1:
-            TSS_over = perf(TSSload,setptTSSload)
+            TSS_over = perf(TSS_load,setptTSSload)
         else:
             TSS_over = np.zeros(n_tanks)
 
-        flow_over = perf(total_flow2,setptOutflow)
+        flow_over = perf(total_flow,setptOutflow)
         flow_over_cum.append(sum(flow_over))
         TSS_over_cum.append(sum(TSS_over))
 
         results.append([epsilon, zeta, sum(flow_over), sum(TSS_over)])
-        #print("MB control (epsilon = " + str(epsilon) + ", zeta = " + str(zeta) + ") flow/TSS over: "
-        #    + str(sum(flow_over)) + ", " + str(sum(TSS_over)))
 
         if plot == 1:
             plt.subplot(231)
-            plt.plot(tanks2)
+            plt.plot(tank_depths)
 
             plt.subplot(232)
-            plt.plot(total_flow2, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+            plt.plot(total_flow, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
             if TSS == 1:
                 plt.subplot(233)
-                plt.plot(TSSload, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+                plt.plot(TSS_load, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
             plt.subplot(234)
             plt.plot(price, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
