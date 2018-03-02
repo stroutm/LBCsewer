@@ -5,6 +5,7 @@ import numpy as np
 
 results = []
 plot = 1
+TSS = 0
 
 record1 = []
 tanks1 = []
@@ -13,7 +14,7 @@ TSSload = []
 flow_over_cum = []
 TSS_over_cum = []
 
-beta = 1.0; epsilons = [0.5]; zetas = [0.0]
+beta = 1.0; epsilons = [0.0]; zetas = [0.0]
 setptOutflow = 2.5
 setptTSSload = 70
 
@@ -36,17 +37,22 @@ while not done:
     total_flow1.append(tot_flow)
     TSSCT = [0.0,0.0,0.0]
     TSSL = [0.0,0.0,0.0]
-    for i in range(0,n_tanks):
-        runoff = 10
-        TSSconcrunoff = 1000
-        if tanks1[-1][i] > 0.01:
-            TSSCT[i] = (30*TSSconcrunoff*runoff/(30*state[0][n_tanks+i]+2000*tanks1[-1][i])) * np.exp(-0.05/((tanks1[-2][i]+tanks1[-1][i])/2)*30)
-        else:
-            TSSCT[i] = 0.0
-        TSSL[i] = TSSCT[i] * state[0][n_tanks+i]
-    TSSload.append(sum(TSSL))
+    if TSS == 1:
+        for i in range(0,n_tanks):
+            runoff = 10
+            TSSconcrunoff = 1000
+            if tanks1[-1][i] > 0.01:
+                TSSCT[i] = (30*TSSconcrunoff*runoff/(30*state[0][n_tanks+i]+2000*tanks1[-1][i])) * np.exp(-0.05/((tanks1[-2][i]+tanks1[-1][i])/2)*30)
+            else:
+                TSSCT[i] = 0.0
+            TSSL[i] = TSSCT[i] * state[0][n_tanks+i]
+        TSSload.append(sum(TSSL))
 
-flow_over,TSS_over = perf(total_flow1,setptOutflow,TSSload,setptTSSload)
+        TSS_over = perf(TSSload,setptTSSload)
+    else:
+        TSS_over = 0
+
+flow_over = perf(total_flow1,setptOutflow)
 
 if plot == 1:
     plt.subplot(231)
@@ -58,11 +64,10 @@ if plot == 1:
     plt.plot(setptOutflow*np.ones(len(total_flow1)), label = "Setpoint")
     plt.plot(total_flow1, label = "No control")
 
-    plt.subplot(233)
-    plt.plot(setptTSSload*np.ones(len(TSSload)), label = "Setpoint")
-    plt.plot(TSSload, label = "No control")
-
-#print("No control flow/TSS over: " + str(sum(flow_over)) + ", " + str(sum(TSS_over)))
+    if TSS == 1:
+        plt.subplot(233)
+        plt.plot(setptTSSload*np.ones(len(TSSload)), label = "Setpoint")
+        plt.plot(TSSload, label = "No control")
 
 for epsilon in epsilons:
     for zeta in zetas:
@@ -86,17 +91,21 @@ for epsilon in epsilons:
             tanks2.append(state[0][0:n_tanks])
             TSSCT = [0.0,0.0,0.0]
             TSSL = [0.0,0.0,0.0]
-            for i in range(0,n_tanks):
-                runoff = 10
-                TSSconcrunoff = 1000
-                if tanks2[-1][i] > 0.01:
-                    TSSCT[i] = (30*TSSconcrunoff*runoff/(30*state[0][n_tanks+i]+2000*tanks2[-1][i])) * np.exp(-0.05/((tanks2[-2][i]+tanks2[-1][i])/2)*30)
-                else:
-                    TSSCT[i] = 0.0
-                TSSL[i] = TSSCT[i] * state[0][n_tanks+i]
-            TSSload.append(sum(TSSL))
+            if TSS == 1:
+                for i in range(0,n_tanks):
+                    runoff = 10
+                    TSSconcrunoff = 1000
+                    if tanks2[-1][i] > 0.01:
+                        TSSCT[i] = (30*TSSconcrunoff*runoff/(30*state[0][n_tanks+i]+2000*tanks2[-1][i])) * np.exp(-0.05/((tanks2[-2][i]+tanks2[-1][i])/2)*30)
+                    else:
+                        TSSCT[i] = 0.0
+                    TSSL[i] = TSSCT[i] * state[0][n_tanks+i]
+                TSSload.append(sum(TSSL))
+            else:
+                TSSload = np.zeros(n_tanks)
+                zeta = 0.0
 
-            p, PD, PS, tot_flow, action = mbc_bin(state, TSSload[-1],
+            p, PD, PS, tot_flow, action = mbc(state, TSSload[-1],
                 setptOutflow, setptTSSload, beta, epsilon, zeta, max_depths,
                 n_tanks, action)
 
@@ -106,7 +115,12 @@ for epsilon in epsilons:
             supply.append(PS)
             total_flow2.append(tot_flow)
 
-        flow_over,TSS_over = perf(total_flow2,setptOutflow,TSSload,setptTSSload)
+        if TSS == 1:
+            TSS_over = perf(TSSload,setptTSSload)
+        else:
+            TSS_over = np.zeros(n_tanks)
+
+        flow_over = perf(total_flow2,setptOutflow)
         flow_over_cum.append(sum(flow_over))
         TSS_over_cum.append(sum(TSS_over))
 
@@ -121,8 +135,9 @@ for epsilon in epsilons:
             plt.subplot(232)
             plt.plot(total_flow2, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
-            plt.subplot(233)
-            plt.plot(TSSload, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+            if TSS == 1:
+                plt.subplot(233)
+                plt.plot(TSSload, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
             plt.subplot(234)
             plt.plot(price, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
@@ -142,9 +157,10 @@ if plot == 1:
     plt.ylabel('Total Outflow')
     plt.legend()
 
-    plt.subplot(233)
-    plt.ylabel('TSS Loading')
-    plt.legend()
+    if TSS == 1:
+        plt.subplot(233)
+        plt.ylabel('TSS Loading')
+        plt.legend()
 
     plt.subplot(234)
     plt.ylabel('Price')

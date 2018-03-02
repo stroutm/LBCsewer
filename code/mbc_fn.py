@@ -58,11 +58,8 @@ def mbc_bin(state, TSSload, setptOutflow, setptTSSload, beta, epsilon, zeta, max
 
     return p, PD, PS, tot_flow, action
 
-def perf(total_flow, setptOutflow, TSSload, setptTSSload):
-    x = total_flow-setptOutflow*np.ones(len(total_flow))
-    flow_over = x*(x>0)
+def perf(actual, setpt):
+    x = actual-setpt*np.ones(len(actual))
+    value_over = x*(x>0)
 
-    x = TSSload-setptTSSload*np.ones(len(TSSload))
-    TSS_over = x*(x>0)
-
-    return flow_over, TSS_over
+    return value_over
