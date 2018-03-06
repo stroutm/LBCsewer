@@ -20,12 +20,13 @@ setptTSSload = 70
 state_space = {"depths":["V-1","V-2","V-3"],
     "flows":["C-7","C-8","C-9"]}
 n_tanks = len(state_space['depths'])
-max_depths = [7.0,6.0,6.5]
 control_points = ["R-4","R-5","R-6"]
 
 env = Env("../data/input_files/tanks_TSS_flooding.inp",
     state_space,
     control_points)
+
+max_depths = env.tempo()
 
 done = False; j = 0
 while not done:
