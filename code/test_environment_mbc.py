@@ -92,9 +92,6 @@ for epsilon in epsilons:
                 TSS_load = np.zeros(n_tanks)
                 zeta = 0.0
 
-            #p, PD, PS, tot_flow, action = mbc_old(state, TSS_load[-1],
-            #    setptOutflow, setptTSSload, beta, epsilon, zeta, max_depths,
-            #    n_tanks, action)
             ustream = state[0,0:n_tanks]/max_depths
             tot_flow = sum(state[0,n_tanks:2*n_tanks])
             dstream = np.array([tot_flow, TSS_load[-1]])
