@@ -38,7 +38,7 @@ class Env:
         self.state_space = state_space
         self.control_points = control_points
 
-    def tempo(self):
+    def sysChar(self):
         max_depths = []
         for d in self.state_space["depths"]:
             max_depths.append(self.sim._model.getNodeParam(d, 1))

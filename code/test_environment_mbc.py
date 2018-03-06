@@ -26,7 +26,7 @@ env = Env("../data/input_files/tanks_TSS_flooding.inp",
     state_space,
     control_points)
 
-max_depths = env.tempo()
+max_depths = env.sysChar()
 
 done = False; j = 0
 while not done:
