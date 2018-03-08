@@ -43,7 +43,9 @@ class Env:
         for d in self.state_space["depths"]:
             max_depths.append(self.sim._model.getNodeParam(d, 1))
 
-        return max_depths
+        routime_step = self.sim._model.getSimAnalysisSetting(0)
+
+        return max_depths, routime_step
 
     def step(self, actions):
 

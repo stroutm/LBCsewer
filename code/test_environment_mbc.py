@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 results = []
-plot = 1
+plot = 0
 TSS = 1
 
 tank_depths = []
@@ -27,7 +27,7 @@ env = Env("../data/input_files/tanks_TSS_flooding.inp",
     state_space,
     control_points)
 
-max_depths = env.sysChar()
+max_depths, routime_step = env.sysChar()
 
 done = False; j = 0
 while not done:
@@ -38,9 +38,9 @@ while not done:
     total_flow.append(tot_flow)
     if TSS == 1:
         if j == 1:
-            TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
+            TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks], routime_step)
         else:
-            TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
+            TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks], routime_step)
         TSS_load.append(sum(TSSL))
 
         TSS_over = perf(TSS_load,setptTSSload)
@@ -85,9 +85,9 @@ for epsilon in epsilons:
             tank_depths.append(state[0][0:n_tanks])
             if TSS == 1:
                 if j == 1:
-                    TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
+                    TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks], routime_step)
                 else:
-                    TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
+                    TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks], routime_step)
                 TSS_load.append(sum(TSSL))
             else:
                 TSS_load = np.zeros(n_tanks)
