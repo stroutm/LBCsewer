@@ -5,7 +5,7 @@ import numpy as np
 
 results = []
 plot = 1
-TSS = 0
+TSS = 1
 
 tank_depths = []
 total_flow = []
@@ -13,12 +13,13 @@ TSS_load = []
 flow_over_cum = []
 TSS_over_cum = []
 
-beta = 1.0; epsilons = [1.0]; zetas = [0.0]
+beta = 1.0; epsilons = [0.0]; zetas = [5.0]
 setptOutflow = 2.5
-setptTSSload = 70
+setptTSSload = 4.0
 
 state_space = {"depths":["V-1","V-2","V-3"],
-    "flows":["C-7","C-8","C-9"]}
+    "flows":["C-7","C-8","C-9"],
+    "inflows":["V-1","V-2","V-3"]}
 n_tanks = len(state_space['depths'])
 control_points = ["R-4","R-5","R-6"]
 
@@ -37,9 +38,9 @@ while not done:
     total_flow.append(tot_flow)
     if TSS == 1:
         if j == 1:
-            TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks])
+            TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
         else:
-            TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks])
+            TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
         TSS_load.append(sum(TSSL))
 
         TSS_over = perf(TSS_load,setptTSSload)
@@ -84,9 +85,9 @@ for epsilon in epsilons:
             tank_depths.append(state[0][0:n_tanks])
             if TSS == 1:
                 if j == 1:
-                    TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks])
+                    TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
                 else:
-                    TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks])
+                    TSSL = TSScalc(n_tanks, tank_depths[-1], tank_depths[-2], state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks])
                 TSS_load.append(sum(TSSL))
             else:
                 TSS_load = np.zeros(n_tanks)

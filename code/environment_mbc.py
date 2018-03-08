@@ -77,4 +77,7 @@ class Env:
         for f in self.state_space["flows"]:
             new_states.append(self.sim._model.getLinkResult(f, 0))
 
+        for i in self.state_space["inflows"]:
+            new_states.append(self.sim._model.getNodeResult(i, 0))
+
         return np.asarray([new_states])

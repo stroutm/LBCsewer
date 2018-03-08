@@ -62,11 +62,11 @@ def perf(actual, setpt):
 
     return value_over
 
-def TSScalc(n_tanks, tankDepth, tankDepthPrev, flow):
+def TSScalc(n_tanks, tankDepth, tankDepthPrev, flow, runoffs):
     TSSCT = np.zeros(n_tanks)
     TSSL = np.zeros(n_tanks)
     for i in range(0,n_tanks):
-        runoff = 10
+        runoff = runoffs[i]
         TSSconcrunoff = 1000
         if tankDepth[i] > 0.01:
             TSSCT[i] = (30*TSSconcrunoff*runoff/(30*flow[i]+2000*tankDepth[i])) * np.exp(-0.05/((tankDepthPrev[i]+tankDepth[i])/2)*30)
