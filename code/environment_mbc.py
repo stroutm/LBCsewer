@@ -73,8 +73,11 @@ class Env:
 
     def states(self):
         new_states = []
-        for d in self.state_space["depths"]:
+        for d in self.state_space["depthsN"]:
             new_states.append(self.sim._model.getNodeResult(d, 5))
+
+        for d in self.state_space["depthsL"]:
+            new_states.append(self.sim._model.getLinkResult(d, 1))
 
         for f in self.state_space["flows"]:
             new_states.append(self.sim._model.getLinkResult(f, 0))
