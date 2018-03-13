@@ -13,8 +13,8 @@ TSS_load = []
 flow_over_cum = []
 TSS_over_cum = []
 
-beta = 1.0; epsilons = [0.0]; zetas = [0.0]
-setptDstream = 300.0
+beta = 1.0; epsilons = [1.0]; zetas = [0.0]
+setptDstream = 70.0
 setptTSSload = 4.0
 
 state_space = {"depthsN":[],
@@ -101,7 +101,11 @@ for epsilon in epsilons:
             setpts = np.array([setptDstream, setptTSSload])
             uparam = beta
             dparam = np.array([epsilon, zeta])
-            p, PD, PS, action = mbc(ustream, dstream, setpts, uparam, dparam, n_tanks)
+            #p, PD, PS, action = mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action)
+            p = 0.0
+            PD = np.zeros(n_tanks)
+            PS = 0.0
+            action = [0.0,0.0,0.0,0.0,0.0,0.0]
 
             gates.append(action[0:n_tanks])
             price.append(p)

@@ -1,12 +1,11 @@
 import numpy as np
 
-def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks):
+def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
     p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
     PS = sum(PD)
-    action = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         if PS == 0:
             Qi = 0
@@ -22,13 +21,12 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks):
 
     return p, PD, PS, action
 
-def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks):
+def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
     p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
     PS = sum(PD)
-    action = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         # Binary option 1
         #if PS == 0:
@@ -48,11 +46,14 @@ def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks):
         #    action[i] = 1.0
         # Binary option 2
         if PD[i] >= p:
-            action[i] = 1
+            action[i] = 1 # dam down gate
+            action[i+n_tanks] = 0 # dam up gate
         else:
-            action[i] = 0 # 0.1424 is area equivalent to 80% filled from bottom
+            action[i] = 0 # dam down gate
+            action[i+n_tanks] = 1 # dam up gate
         if ustream[i] > 0.95:
-            action[i] = 1
+            action[i] = 1 # dam down gate
+            action[i+n_tanks] = 0 # dam up gate
 
     return p, PD, PS, action
 
