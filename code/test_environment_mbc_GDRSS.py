@@ -3,18 +3,20 @@ from mbc_fn import mbc, mbc_bin, perf, TSScalc
 import matplotlib.pyplot as plt
 import numpy as np
 
-results = []
 plot = 1
 TSS = 0
 
 ustream_depths = []
 dstream_flow = []
+#underflow = []
+#damDOWNflow = []
+#damUPflow = []
 TSS_load = []
 flow_over_cum = []
 TSS_over_cum = []
 
 beta = 1.0; epsilons = [1.0]; zetas = [0.0]
-setptDstream = 70.0
+setptDstream = 150.0
 setptTSSload = 4.0
 
 state_space = {"depthsN":[],
@@ -24,19 +26,22 @@ state_space = {"depthsN":[],
 n_tanks = 3
 control_points = ["ISD002_DOWN","ISD003_DOWN","ISD004_DOWN","ISD002_UP","ISD003_UP","ISD004_UP"]
 
-env = Env("../data/input_files/GDRSS/GDRSS_simple3_ISD_Rework_GJE.inp",
+env = Env("../data/input_files/GDRSS/GDRSS_simple3_ISD_Rework_GJE_edit.inp",
     state_space,
     control_points)
 
-max_depths = [13.45,40.0,14.0]
+max_depths = [13.45,40,14]
 routime_step = 900
 
 done = False; j = 0
 while not done:
     j += 1
-    state, done = env.step([1.0,1.0,1.0,0.0,0.0,0.0])
+    state, done = env.step([1.0,1.0,1.0,1.0,1.0,1.0])
     ustream_depths.append(state[0][0:n_tanks])
-    dstream_flow.append(state[0][-1])
+    dstream_flow.append(state[0][n_tanks])
+    #underflow.append(state[0][n_tanks+2])
+    #damDOWNflow.append(state[0][n_tanks+1])
+    #damUPflow.append(state[0][n_tanks+4])
     if TSS == 1:
         if j == 1:
             TSSL = TSScalc(n_tanks, tank_depths[-1], 0, state[0][n_tanks:2*n_tanks], state[0][2*n_tanks:3*n_tanks], routime_step)
@@ -54,7 +59,7 @@ if plot == 1:
     plt.subplot(231)
     for i in range(0,n_tanks):
         plt.plot(max_depths[i]*np.ones(len(ustream_depths)), label = "Setpoint for tank " + str(i+1))
-    plt.plot(ustream_depths)
+    plt.plot(ustream_depths, label = "No control")
 
     plt.subplot(232)
     plt.plot(setptDstream*np.ones(len(dstream_flow)), label = "Setpoint")
@@ -64,6 +69,11 @@ if plot == 1:
         plt.subplot(233)
         plt.plot(setptTSSload*np.ones(len(TSS_load)), label = "Setpoint")
         plt.plot(TSS_load, label = "No control")
+
+    #plt.subplot(233)
+    #plt.plot(underflow, label = "No control, underflow")
+    #plt.plot(damDOWNflow, label = "No control, dam down")
+    #plt.plot(damUPflow, label = "No control, dam up")
 
 print('Done with no control')
 
@@ -76,11 +86,14 @@ for epsilon in epsilons:
         demand = []
         supply = []
         dstream_flow = []
+        #underflow = []
+        #damDOWNflow = []
+        #damUPflow = []
         TSS_load = []
         gates = []
 
         done = False; j = 0
-        action = [0.5,0.5,0.5,0.0,0.0,0.0]
+        action = [0.0,0.0,0.0,0.0,0.0,0.0]
 
         while not done:
             j += 1
@@ -97,21 +110,21 @@ for epsilon in epsilons:
                 zeta = 0.0
 
             ustream = state[0,0:n_tanks]/max_depths
-            dstream = np.array([state[0,-1]])
+            dstream = np.array([state[0,n_tanks]])
             setpts = np.array([setptDstream, setptTSSload])
             uparam = beta
             dparam = np.array([epsilon, zeta])
-            #p, PD, PS, action = mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action)
-            p = 0.0
-            PD = np.zeros(n_tanks)
-            PS = 0.0
-            action = [0.0,0.0,0.0,0.0,0.0,0.0]
+            p, PD, PS, action = mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action)
+            #p = 0.0; PD = np.zeros(n_tanks); PS = 0.0; action = [1.0,0.0,0.0,1.0,0.0,0.0]
 
             gates.append(action[0:n_tanks])
             price.append(p)
             demand.append(PD)
             supply.append(PS)
-            dstream_flow.append(state[0][-1])
+            dstream_flow.append(state[0][n_tanks])
+            #underflow.append(state[0][n_tanks+2])
+            #damDOWNflow.append(state[0][n_tanks+1])
+            #damUPflow.append(state[0][n_tanks+4])
 
         if TSS == 1:
             TSS_over = perf(TSS_load,setptTSSload)
@@ -122,11 +135,9 @@ for epsilon in epsilons:
         flow_over_cum.append(sum(flow_over))
         TSS_over_cum.append(sum(TSS_over))
 
-        results.append([epsilon, zeta, sum(flow_over), sum(TSS_over)])
-
         if plot == 1:
             plt.subplot(231)
-            plt.plot(ustream_depths)
+            plt.plot(ustream_depths, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
 
             plt.subplot(232)
             plt.plot(dstream_flow, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
@@ -134,6 +145,11 @@ for epsilon in epsilons:
             if TSS == 1:
                 plt.subplot(233)
                 plt.plot(TSS_load, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
+
+            #plt.subplot(233)
+            #plt.plot(underflow, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta) + ", underflow")
+            #plt.plot(damDOWNflow, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta) + ", dam down")
+            #plt.plot(damUPflow, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta) + ", dam up")
 
             plt.subplot(234)
             plt.plot(price, label = "MBC, epsilon = " + str(epsilon) + ", zeta = " + str(zeta))
@@ -158,6 +174,10 @@ if plot == 1:
         plt.ylabel('TSS Loading')
         plt.legend()
 
+    #plt.subplot(233)
+    #plt.ylabel('Flows')
+    #plt.legend()
+
     plt.subplot(234)
     plt.ylabel('Price')
     plt.legend()
@@ -169,5 +189,3 @@ if plot == 1:
     plt.ylabel('Gate opening')
 
     plt.show()
-
-np.savetxt("../data/results/res.csv",results,delimiter=',')

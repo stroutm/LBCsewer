@@ -29,31 +29,35 @@ def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
     PS = sum(PD)
     for i in range(0,n_tanks):
         # Binary option 1
-        #if PS == 0:
-        #    Qi = 0.0
-        #else:
-        #    Qi = PD[i]/PS*setpts[0] # setpts[0] assumed to be downstream flow setpoint
-        #if ustream[i] == 0:
-        #    action[i] = 0.0
-        #else:
-        #    h2i = Qi/(0.61*1*np.sqrt(2*9.81*ustream[i]))
-        #    action[i] = max(min(h2i/2,1.0),0.0)
-        #    if action[i] >= 0.5:
-        #        action[i] = 1.0
-        #    else:
-        #        action[i] = 0.0
-        #if ustream[i] > 0.95:
-        #    action[i] = 1.0
-        # Binary option 2
-        if PD[i] >= p:
-            action[i] = 1 # dam down gate
-            action[i+n_tanks] = 0 # dam up gate
+        if PS == 0:
+            Qi = 0.0
         else:
-            action[i] = 0 # dam down gate
-            action[i+n_tanks] = 1 # dam up gate
+            Qi = PD[i]/PS*setpts[0] # setpts[0] assumed to be downstream flow setpoint
+        if ustream[i] == 0:
+            action[i] = 0.0
+            action[i+n_tanks] = 1.0
+        else:
+            h2i = Qi/(0.61*1*np.sqrt(2*9.81*ustream[i]))
+            action[i] = max(min(h2i/2,1.0),0.0)
+            if action[i] >= 0.5:
+                action[i] = 1.0
+                action[i+n_tanks] = 0.0
+            else:
+                action[i] = 0.0
+                action[i+n_tanks] = 1.0
         if ustream[i] > 0.95:
-            action[i] = 1 # dam down gate
-            action[i+n_tanks] = 0 # dam up gate
+            action[i] = 1.0
+            action[i+n_tanks] = 0.0
+        # Binary option 2
+        #if PD[i] >= p:
+        #    action[i] = 1.0 # dam down gate
+        #    action[i+n_tanks] = 0.0 # dam up gate
+        #else:
+        #    action[i] = 0.0 # dam down gate
+        #    action[i+n_tanks] = 1.0 # dam up gate
+        #if ustream[i] > 0.95:
+        #    action[i] = 1.0 # dam down gate
+        #    action[i+n_tanks] = 0.0 # dam up gate
 
     return p, PD, PS, action
 
