@@ -17,9 +17,10 @@ TSS_over_cum = []
 
 beta = 1.0; epsilons = [1.0]; zetas = [0.0]#; gammas = [0.0,1.0]
 linestyles = ['-','-.']
-setptFlow = 0.2 #150.0
+setptFlow = 0.4 #150.0
 setptTSSload = 4.0
 #setptFlowDeriv = 0.0
+repTot = 1000 # only control every *repTot* steps
 
 state_space = {"depthsN":[],
                 "depthsL":["1509","RC1954","1520"],
@@ -128,37 +129,53 @@ for epsilon in epsilons:
             uparam = beta
             dparam = np.array([epsilon])
             #dparam = np.array([epsilon, gamma])#dparam = np.array([epsilon, zeta])
+            actPrev = np.zeros(2*n_tanks)
+            actCurr = np.zeros(2*n_tanks)
+            for m in range(0,n_tanks):
+                if action[m] == 1.0:
+                    actPrev[m] = 1.0
+                    actPrev[m+n_tanks] = 0.0
+                elif action [m] == 0.0:
+                    actPrev[m] = 0.0
+                    actPrev[m+n_tanks] = 1.0
             p, PD, PS, action = mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action)
+            for m in range(0,n_tanks):
+                if action[m] == 1.0:
+                    actCurr[m] = 1.0
+                    actCurr[m+n_tanks] = 0.0
+                elif action [m] == 0.0:
+                    actCurr[m] = 0.0
+                    actCurr[m+n_tanks] = 1.0
+            for m in range(0,n_tanks):
+                if actCurr[m] - actPrev[m] > 0.5: #if actPrev[m] == 0.0 and actCurr[m] == 1.0:
+                    action[m] = 0.0; action[m+n_tanks] = 1.0
+                elif actPrev[m] - actCurr[m] > 0.5:
+                    action[m] = 1.0; action[m+n_tanks] = 0.0
 
-            #gates.append(action[0:n_tanks])
-            gate_1.append(action[0])
-            gate_2.append(action[1])
-            gate_3.append(action[2])
-            price.append(p)
-            #demand.append(PD)
-            demand_1.append(PD[0])
-            demand_2.append(PD[1])
-            demand_3.append(PD[2])
-            supply.append(PS)
-            #ustream_depths.append(state[0][0:n_tanks]/max_depths)#ustream_depths.append(state[0][0:n_tanks])
-            ustream_depth_1.append(state[0][0]/max_depths[0])
-            ustream_depth_2.append(state[0][1]/max_depths[1])
-            ustream_depth_3.append(state[0][2]/max_depths[2])
-            dstream_flow.append(state[0][n_tanks]/max_flow)
+                #gates.append(action[0:n_tanks])
+            gate_1.append(action[0]); gate_2.append(action[1]); gate_3.append(action[2]); price.append(p)
+                #demand.append(PD)
+            demand_1.append(PD[0]); demand_2.append(PD[1]); demand_3.append(PD[2]); supply.append(PS)
+                #ustream_depths.append(state[0][0:n_tanks]/max_depths)#ustream_depths.append(state[0][0:n_tanks])
+            ustream_depth_1.append(state[0][0]/max_depths[0]); ustream_depth_2.append(state[0][1]/max_depths[1]); ustream_depth_3.append(state[0][2]/max_depths[2]); dstream_flow.append(state[0][n_tanks]/max_flow)
 
             # step w/o control
-            #print("rep")
+            gateTrans = np.linspace(0.0,1.0,repTot+1)
             rep = 0
-            while rep < 1000:
+            while rep < repTot:
                 rep += 1
-                #state, done = env.step(action)
-                #gate_1.append(action[0]); gate_2.append(action[1]); gate_3.append(action[2]); price.append(p); demand_1.append(PD[0]); demand_2.append(PD[1]); demand_3.append(PD[2]); supply.append(PS); ustream_depth_1.append(state[0][0]/max_depths[0]); ustream_depth_2.append(state[0][1]/max_depths[1]); ustream_depth_3.append(state[0][2]/max_depths[2]); dstream_flow.append(state[0][n_tanks]/max_flow)
                 if done == False:
                     # include something to make sure gate opens if upstream > 0.95
                     state, done = env.step(action)
+                    for m in range(0,n_tanks):
+                        if actCurr[m] - actPrev[m] > 0.5:
+                            action[m] = gateTrans[rep]; action[m+n_tanks] = 1-gateTrans[rep]
+                        elif actPrev[m] - actCurr[m] > 0.5:
+                            action[m] = 1-gateTrans[rep]; action[m+n_tanks] = gateTrans[rep]
                     gate_1.append(action[0]); gate_2.append(action[1]); gate_3.append(action[2]); price.append(p); demand_1.append(PD[0]); demand_2.append(PD[1]); demand_3.append(PD[2]); supply.append(PS); ustream_depth_1.append(state[0][0]/max_depths[0]); ustream_depth_2.append(state[0][1]/max_depths[1]); ustream_depth_3.append(state[0][2]/max_depths[2]); dstream_flow.append(state[0][n_tanks]/max_flow)
                 else:
                     break
+            action = actCurr
 
         if TSS == 1:
             TSS_over = perf(TSS_load,setptTSSload)
