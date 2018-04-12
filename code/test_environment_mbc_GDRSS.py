@@ -6,18 +6,18 @@ import numpy as np
 # Weighting parameters
 beta = 1.0 # upstream depth
 epsilons = [1.0] # downstream flow
-gammas = [1.0] # downstream flow derivative
+gammas = [0.0] # downstream flow derivative
 zetas = [0.0] # downstream TSS loading
 
 # Downstream setpoints
-setptFlow = 0.2
+setptFlow = 0.3
 setptFlowDeriv = 0.0
 setptTSSload = 4.0
 
 # Control specifications
-repTot = 100 # only control every repTot steps
+repTot = 1 # only control every repTot steps
 contType = "continuous" # "binary" {0,1} or "continuous" [0,1] gate openings
-deriv = 1 # 1 to control for flow derivative; 0 otherwise
+deriv = 0 # 1 to control for flow derivative; 0 otherwise
 # TSS not yet established for GDRSS
 TSS = 0 # 1 to control for TSS; 0 otherwise
 
@@ -55,11 +55,6 @@ dstream_flow = []
 TSS_load = []
 flow_over_cum = []
 TSS_over_cum = []
-
-if plot == 1:
-    plt.subplot(322)
-    plt.plot(setptFlow*np.ones(len(dstream_flow)), label = "Setpoint",
-            color = 'k')
 
 if noControl == 1:
     done = False; j = 0
@@ -104,6 +99,11 @@ if noControl == 1:
             plt.plot(setptTSSload*np.ones(len(TSS_load)), label = "Setpoint")
 
     print('Done with no control')
+
+if plot == 1:
+    plt.subplot(322)
+    plt.plot(setptFlow*np.ones(len(dstream_flow)), label = "Setpoint",
+            color = 'k')
 
 k = -1
 for epsilon in epsilons:
