@@ -5,12 +5,12 @@ import numpy as np
 
 # Weighting parameters
 beta = 1.0 # upstream depth
-epsilons = [1.0] # downstream flow
+epsilons = [100.0] # downstream flow
 gammas = [0.0] # downstream flow derivative
 zetas = [0.0] # downstream TSS loading
 
 # Downstream setpoints
-setptFlow = 0.3
+setptFlow = 0.2 # normalized to max_depth
 setptFlowDeriv = 0.0
 setptTSSload = 4.0
 
@@ -25,33 +25,43 @@ TSS = 0 # 1 to control for TSS; 0 otherwise
 plot = 1 # 1 to plot results; 0 otherwise
 linestyles = ['-','-.'] # linestyles for different parameter trials
 colors = ['#00a650','#008bff','#ff4a00'] # colors for each upstream asset
+ustream_labels = ['ISD008','ISD009','ISD010']
 noControl = 1 # 1 to include no control simulation; 0 otherwise
 
 # States to pull from simulation (must include upstream and downstream states
 # for control objectives)
-state_space = {"depthsN":[],
-                "depthsL":["1509","RC1954","1520"],
-                "flows":["1503"],
+#state_space = {"depthsN":[], #ISD011-013
+#                "depthsL":["2750","2525","2360"],
+#                "flows":["27450"],
+#                "inflows":[]}
+state_space = {"depthsN":[], #ISD008-010
+                "depthsL":["2190","2198","2220"],
+                "flows":["21855"],
                 "inflows":[]}
+#state_space = {"depthsN":[], #ISD002-004
+#                "depthsL":["1509","RC1954","1520"],
+#                "flows":["1503"],
+#                "inflows":[]}
 n_tanks = 3 # number of upstream tanks/conduits
-control_points = ["ISD002_DOWN","ISD003_DOWN","ISD004_DOWN","ISD002_UP",
-                    "ISD003_UP","ISD004_UP"]
-max_depths = [13.45,40,14] # upstream tanks/conduits max depths for
+#control_points = ["ISD011_DOWN","ISD012_DOWN","ISD013_DOWN","ISD011_UP",
+#                    "ISD012_UP","ISD013_UP"]
+control_points = ["ISD008_DOWN","ISD009_DOWN","ISD010_DOWN","ISD008_UP",
+                    "ISD009_UP","ISD010_UP"]
+max_depths = [15.5,15.5,12.25] # upstream tanks/conduits max depths for
                             # normalization
-max_flow = 585 # downstream max flow for normalization;
-                # 585 peak flow for no control;
+max_flow = 148 # downstream max flow for normalization;
+                # 585 peak flow for no control for conduit 1503;
                 # 1193.0455 as calculated for conduit 1503
 routime_step = 10 # routing timestep in seconds
 
 # Input file, state space, and control points
+#env = Env("../data/input_files/GDRSS/pyswmm_GDRSS_withISDs_RainEvents_1.inp",
+#    state_space,
+#    control_points)
 env = Env("../data/input_files/GDRSS/GDRSS_simple3_ISD_Rework_GJE_edit.inp",
     state_space,
     control_points)
 
-ustream_depth_1 = []
-ustream_depth_2 = []
-ustream_depth_3 = []
-dstream_flow = []
 TSS_load = []
 flow_over_cum = []
 TSS_over_cum = []
@@ -60,11 +70,13 @@ if noControl == 1:
     done = False; j = 0
     while not done:
         j += 1
-        state, done = env.step([1.0,1.0,1.0,0.0,0.0,0.0])
-        ustream_depth_1.append(state[0][0]/max_depths[0])
-        ustream_depth_2.append(state[0][1]/max_depths[1])
-        ustream_depth_3.append(state[0][2]/max_depths[2])
-        dstream_flow.append(state[0][n_tanks]/max_flow)
+        state, done = env.step(np.hstack((np.ones(n_tanks),np.zeros(n_tanks))))
+        if j == 1:
+            ustream_depths = state[0][0:n_tanks]/max_depths
+            dstream_flow = state[0][n_tanks]/max_flow
+        else:
+            ustream_depths = np.vstack((ustream_depths,state[0][0:n_tanks]/max_depths))
+            dstream_flow = np.vstack((dstream_flow,state[0][n_tanks]/max_flow))
         if TSS == 1:
             if j == 1:
                 TSSL = TSScalc(n_tanks, tank_depths[-1], 0,
@@ -83,27 +95,20 @@ if noControl == 1:
     flow_over = perf(dstream_flow,setptFlow)
 
     if plot == 1:
-        plt.subplot(321)
-        plt.plot(ustream_depth_1, label = "No control, ISD002",
-                color = colors[0], linestyle = '--')
-        plt.plot(ustream_depth_2, label = "No control, ISD003",
-                color = colors[1], linestyle = '--')
-        plt.plot(ustream_depth_3, label = "No control, ISD004",
-                color = colors[2], linestyle = '--')
+        for a in range(0,n_tanks):
+            plt.subplot(321) # upstream depths
+            plt.plot(ustream_depths[:,a],
+                label = "No control, " + ustream_labels[a],
+                color = colors[a], linestyle = '--')
 
-        plt.subplot(322)
+        plt.subplot(322) # downstream flows
         plt.plot(dstream_flow, label = "No control", color = colors[0])
 
         if TSS == 1:
-            plt.subplot(323)
+            plt.subplot(323) # downstream TSS loading
             plt.plot(setptTSSload*np.ones(len(TSS_load)), label = "Setpoint")
 
     print('Done with no control')
-
-if plot == 1:
-    plt.subplot(322)
-    plt.plot(setptFlow*np.ones(len(dstream_flow)), label = "Setpoint",
-            color = 'k')
 
 k = -1
 for epsilon in epsilons:
@@ -112,14 +117,8 @@ for epsilon in epsilons:
             k += 1
             env.reset()
 
-            ustream_depth_1 = []; ustream_depth_2 = []; ustream_depth_3 = []
-            price = []
-            demand_1 = []; demand_2 = []; demand_3 = []; supply = []
-            dstream_flow = []; TSS_load = []
-            gate_1 = []; gate_2 = []; gate_3 = []
-
             done = False; j = 0
-            action = [1.0,1.0,1.0,0.0,0.0,0.0]
+            action = np.hstack((np.ones(n_tanks),np.zeros(n_tanks)))
 
             while not done:
                 j += 1
@@ -166,10 +165,7 @@ for epsilon in epsilons:
                                             sum(TSSL)])
                     setpts = np.array([setptFlow, setptFlowDeriv, setptTSSload])
                     dparam = np.array([epsilon, gamma, zeta])
-                #dstream = np.array([state[0,n_tanks]/max_flow])
-                #setpts = np.array([setptFlow])
-                uparam = beta # dparam = np.array([epsilon])
-                actPrev = np.zeros(2*n_tanks); actCurr = np.zeros(2*n_tanks)
+                uparam = beta
                 actPrev = action[:]
                 if contType == "binary":
                     p, PD, PS, action = mbc_bin(ustream, dstream, setpts, uparam,
@@ -178,40 +174,56 @@ for epsilon in epsilons:
                     p, PD, PS, action = mbc(ustream, dstream, setpts, uparam,
                                             dparam, n_tanks, action)
                 actCurr = action[:]
-                action = actPrev[:]
+                if repTot > 1:
+                    action = actPrev[:]
+                else:
+                    action = actCurr[:]
 
-                gate_1.append(action[0]); gate_2.append(action[1])
-                gate_3.append(action[2]); price.append(p)
-                demand_1.append(PD[0]); demand_2.append(PD[1])
-                demand_3.append(PD[2]); supply.append(PS)
-                ustream_depth_1.append(state[0][0]/max_depths[0])
-                ustream_depth_2.append(state[0][1]/max_depths[1])
-                ustream_depth_3.append(state[0][2]/max_depths[2])
-                dstream_flow.append(state[0][n_tanks]/max_flow)
+                if j == 1:
+                    ustream_depths = state[0][0:n_tanks]/max_depths
+                    dstream_flow = state[0][n_tanks]/max_flow
+                    price = p
+                    demands = PD
+                    supply = PS
+                    gates = action
+                else:
+                    ustream_depths = np.vstack((ustream_depths,state[0][0:n_tanks]/max_depths))
+                    dstream_flow = np.vstack((dstream_flow,state[0][n_tanks]/max_flow))
+                    price = np.vstack((price,p))
+                    demands = np.vstack((demands,PD))
+                    supply = np.vstack((supply,PS))
+                    gates = np.vstack((gates,action))
 
-                # Step without control
-                gateTrans = np.zeros((n_tanks,repTot+1))
-                for m in range(0,n_tanks):
-                    gateTrans[m,:] = np.linspace(actPrev[m],actCurr[m],repTot+1)
-                rep = 0
-                while rep < repTot:
-                    rep += 1
-                    if done == False:
-                        # include something to make sure gate opens if upstream > 0.95
-                        state, done = env.step(action)
-                        for m in range(0,n_tanks):
-                            action[m] = gateTrans[m,rep]
-                            action[m+n_tanks] = 1.0 - gateTrans[m,rep]
-                        gate_1.append(action[0]); gate_2.append(action[1])
-                        gate_3.append(action[2]); price.append(p)
-                        demand_1.append(PD[0]); demand_2.append(PD[1])
-                        demand_3.append(PD[2]); supply.append(PS)
-                        ustream_depth_1.append(state[0][0]/max_depths[0])
-                        ustream_depth_2.append(state[0][1]/max_depths[1])
-                        ustream_depth_3.append(state[0][2]/max_depths[2])
-                        dstream_flow.append(state[0][n_tanks]/max_flow)
-                    else:
-                        break
+                if repTot > 1:
+                    # Step without control
+                    gateTrans = np.zeros((n_tanks,repTot+1))
+                    for m in range(0,n_tanks):
+                        gateTrans[m,:] = np.linspace(actPrev[m],actCurr[m],repTot+1)
+                    rep = 0
+                    while rep < repTot:
+                        rep += 1
+                        print('rep')
+                        if done == False:
+                            # include something to make sure gate opens if upstream > 0.95
+                            state, done = env.step(action)
+                            for m in range(0,n_tanks):
+                                action[m] = gateTrans[m,rep]
+                                action[m+n_tanks] = 1.0 - gateTrans[m,rep]
+                            if j == 1:
+                                ustream_depths = state[0][0:n_tanks]/max_depths
+                                dstream_flow = state[0][n_tanks]/max_flow
+                                demands = PD
+                                supply = PS
+                                gates = action
+                            else:
+                                ustream_depths = np.vstack((ustream_depths,state[0][0:n_tanks]/max_depths))
+                                dstream_flow = np.vstack((dstream_flow,state[0][n_tanks]/max_flow))
+                                demands = np.vstack((demands,PD))
+                                supply = np.vstack((supply,PS))
+                                gates = np.vstack((gates,action))
+                        else:
+                            break
+
                 action = actCurr[:]
 
             if TSS == 1:
@@ -224,13 +236,21 @@ for epsilon in epsilons:
             TSS_over_cum.append(sum(TSS_over))
 
             if plot == 1:
-                plt.subplot(321)
-                plt.plot(ustream_depth_1, label = "Market-based control, ISD002",
-                            color = colors[0], linestyle = linestyles[k])
-                plt.plot(ustream_depth_2, label = "Market-based control, ISD003",
-                            color = colors[1], linestyle = linestyles[k])
-                plt.plot(ustream_depth_3, label = "Market-based control, ISD004",
-                            color = colors[2], linestyle = linestyles[k])
+                for a in range(0,n_tanks):
+                    plt.subplot(321)
+                    plt.plot(ustream_depths[:,a],
+                        label = "Market-based control, " + ustream_labels[a],
+                        color = colors[a], linestyle = linestyles[k])
+
+                    plt.subplot(324)
+                    plt.plot(demands[:,a],
+                        label = "Demand, " + ustream_labels[a],
+                        color = colors[a], linestyle = linestyles[k])
+
+                    plt.subplot(326)
+                    plt.plot(gates[:,a],
+                        label = "Dam down, " + ustream_labels[a],
+                        color = colors[a], linestyle = linestyles[k])
 
                 plt.subplot(322)
                 plt.plot(dstream_flow, label = "Market-based control",
@@ -245,22 +265,6 @@ for epsilon in epsilons:
                 plt.plot(price, label = "Price", color = 'k',
                             linestyle = linestyles[k])
 
-                plt.subplot(324)
-                plt.plot(demand_1, label = "Demand, ISD002", color = colors[0],
-                            linestyle = linestyles[k])
-                plt.plot(demand_2, label = "Demand, ISD003", color = colors[1],
-                            linestyle = linestyles[k])
-                plt.plot(demand_3, label = "Demand, ISD004", color = colors[2],
-                            linestyle = linestyles[k])
-
-                plt.subplot(326)
-                plt.plot(gate_1, label = "Dam down, ISD002", color = colors[0],
-                            linestyle = linestyles[k])
-                plt.plot(gate_2, label = "Dam down, ISD003", color = colors[1],
-                            linestyle = linestyles[k])
-                plt.plot(gate_3, label = "Dam down, ISD004", color = colors[2],
-                            linestyle = linestyles[k])
-
             print('Done with MBC, epsilon = ' + str(epsilon) +
                     ', gamma = ' + str(gamma) + ', zeta = ' + str(zeta))
 
@@ -272,6 +276,8 @@ if plot == 1:
     plt.legend()
 
     plt.subplot(322)
+    plt.plot(setptFlow*np.ones(len(dstream_flow)), label = "Setpoint",
+            color = 'k')
     plt.ylabel('Downstream Normalized Flow')
     #plt.gca().set_title('(2)')
     plt.legend()

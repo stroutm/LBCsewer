@@ -62,7 +62,8 @@ def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
     return p, PD, PS, action
 
 def perf(actual, setpt):
-    x = actual-setpt*np.ones(len(actual))
+    x = actual-setpt
+    #x = actual-setpt*np.ones(len(actual))
     value_over = x*(x>0)
 
     return value_over
