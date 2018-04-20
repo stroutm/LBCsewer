@@ -2,6 +2,7 @@ from environment_mbc import Env
 from mbc_fn import mbc, mbc_bin, perf, TSScalc
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
 
 # Weighting parameters
 beta = 1.0 # upstream depth
@@ -24,32 +25,22 @@ TSS = 0 # 1 to control for TSS; 0 otherwise
 # Plotting specifications
 plot = 1 # 1 to plot results; 0 otherwise
 linestyles = ['-','-.'] # linestyles for different parameter trials
-colors = ['#00a650','#008bff','#ff4a00'] # colors for each upstream asset
-ustream_labels = ['ISD008','ISD009','ISD010']
+colors = ['#00a650','#008bff','#ff4a00','#ffb502'] # colors for each upstream asset
+ustream_labels = ['ISD007','ISD008','ISD009','ISD010']
 noControl = 1 # 1 to include no control simulation; 0 otherwise
 
 # States to pull from simulation (must include upstream and downstream states
 # for control objectives)
-#state_space = {"depthsN":[], #ISD011-013
-#                "depthsL":["2750","2525","2360"],
-#                "flows":["27450"],
-#                "inflows":[]}
-state_space = {"depthsN":[], #ISD008-010
-                "depthsL":["2190","2198","2220"],
-                "flows":["21855"],
+state_space = {"depthsN":[],
+                "depthsL":["2180","2190","2198","2220"],
+                "flows":["21700"],
                 "inflows":[]}
-#state_space = {"depthsN":[], #ISD002-004
-#                "depthsL":["1509","RC1954","1520"],
-#                "flows":["1503"],
-#                "inflows":[]}
-n_tanks = 3 # number of upstream tanks/conduits
-#control_points = ["ISD011_DOWN","ISD012_DOWN","ISD013_DOWN","ISD011_UP",
-#                    "ISD012_UP","ISD013_UP"]
-control_points = ["ISD008_DOWN","ISD009_DOWN","ISD010_DOWN","ISD008_UP",
-                    "ISD009_UP","ISD010_UP"]
-max_depths = [15.5,15.5,12.25] # upstream tanks/conduits max depths for
+n_tanks = 4 # number of upstream tanks/conduits
+control_points = ["ISD007_DOWN","ISD008_DOWN","ISD009_DOWN","ISD010_DOWN",
+                    "ISD007_UP","ISD008_UP","ISD009_UP","ISD010_UP"]
+max_depths = [15.5,15.5,15.5,12.25] # upstream tanks/conduits max depths for
                             # normalization
-max_flow = 148 # downstream max flow for normalization;
+max_flow = 143 # downstream max flow for normalization;
                 # 585 peak flow for no control for conduit 1503;
                 # 1193.0455 as calculated for conduit 1503
 routime_step = 10 # routing timestep in seconds
@@ -109,6 +100,10 @@ if noControl == 1:
             plt.plot(setptTSSload*np.ones(len(TSS_load)), label = "Setpoint")
 
     print('Done with no control')
+
+with open('../data/results/no_control/iter1.pkl','w') as f:
+    pickle.dump([state_space,ustream_depths,dstream_flow],f)
+print('No control results saved')
 
 k = -1
 for epsilon in epsilons:
@@ -267,6 +262,13 @@ for epsilon in epsilons:
 
             print('Done with MBC, epsilon = ' + str(epsilon) +
                     ', gamma = ' + str(gamma) + ', zeta = ' + str(zeta))
+
+            with open('../data/results/control/iter1.pkl','w') as f:
+                pickle.dump([beta,epsilon,gamma,zeta,setptFlow,setptFlowDeriv,
+                            setptTSSload,repTot,contType,state_space,control_points,
+                            max_flow,ustream_depths,dstream_flow,demands,price,gates]
+                            ,f)
+            print('MBC results saved')
 
 if plot == 1:
     plt.subplot(321)
