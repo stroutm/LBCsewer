@@ -2,17 +2,17 @@ import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 
-fileNames = ['iter14.pkl','iter15.pkl']
+fileNames = ['iter1.pkl','iter8.pkl','iter3.pkl']
 
 colors = ['#00a650','#008bff','#ff4a00','#ffb502'] # colors for each upstream asset
 
-for fileName in fileNames:
+for i in range(0,len(fileNames)):
     # No control
-    with open('../data/results/no_control/'+fileName) as f:
+    with open('../data/results/no_control/'+fileNames[i]) as f:
         state_space, ustream_depths, dstream_flow = pickle.load(f)
 
     for a in range(0,len(state_space['depthsL'])):
-        plt.figure(fileName)
+        plt.figure(i+1)
         plt.subplot(321) # upstream depths
         plt.plot(ustream_depths[:,a],
             label = "No control",
@@ -22,7 +22,7 @@ for fileName in fileNames:
     plt.plot(dstream_flow, label = "No control", color = colors[0])
 
     # Control
-    with open('../data/results/control/'+fileName) as f:
+    with open('../data/results/control/'+fileNames[i]) as f:
         beta, epsilon, gamma, zeta, setptFlow, setptFlowDeriv, setptTSSload, repTot, contType, state_space, control_points, max_flow, ustream_depths, dstream_flow, demands, price, gates = pickle.load(f)
 
     for a in range(0,len(state_space['depthsL'])):

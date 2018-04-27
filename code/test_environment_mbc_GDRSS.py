@@ -11,9 +11,9 @@ gammas = [0.0] # downstream flow derivative
 zetas = [0.0] # downstream TSS loading
 
 # Downstream setpoints
-setptFlow = 0.5 # normalized to max_depth
+setptFlow = 0.1 # normalized to max_depth
 setptFlowDeriv = 0.0
-setptTSSload = 4.0
+setptTSSload = 0.0
 
 # Control specifications
 repTot = 1 # only control every repTot steps
@@ -24,25 +24,25 @@ TSS = 0 # 1 to control for TSS; 0 otherwise
 
 # Plotting/saving specifications
 save = 0 # 1 to save results; 0 otherwise
-saveName = 'iter8'
+saveName = 'iter19'
 plot = 1 # 1 to plot results; 0 otherwise
 linestyles = ['-','-.'] # linestyles for different parameter trials
 colors = ['#00a650','#008bff','#ff4a00','#ffb502'] # colors for each upstream asset
-ustream_labels = ['ISD002','ISD003','ISD004']
+ustream_labels = ['ISD007','ISD008','ISD009','ISD010']
 noControl = 1 # 1 to include no control simulation; 0 otherwise
 
 # States to pull from simulation (must include upstream and downstream states
 # for control objectives)
 state_space = {"depthsN":[],
-                "depthsL":["1509","RC1951","1520"],
-                "flows":["1503"],
+                "depthsL":["2180","2190","2198","2220"],
+                "flows":["21700"],
                 "inflows":[]}
-n_tanks = 3 # number of upstream tanks/conduits
-control_points = ["ISD002_DOWN","ISD003_DOWN","ISD004_DOWN",
-                    "ISD002_UP","ISD003_UP","ISD004_UP"]
-max_depths = [13.45,20.0,14.0] # upstream tanks/conduits max depths for
+n_tanks = len(state_space['depthsL']) # number of upstream tanks/conduits
+control_points = ["ISD007_DOWN","ISD008_DOWN","ISD009_DOWN","ISD010_DOWN",
+                    "ISD007_UP","ISD008_UP","ISD009_UP","ISD010_UP"]
+max_depths = [15.5,15.5,15.5,12.25] # upstream tanks/conduits max depths for
                             # normalization
-max_flow = 584 # downstream max flow for normalization;
+max_flow = 143 # downstream max flow for normalization;
                 # 585 peak flow for no control for conduit 1503;
                 # 1193.0455 as calculated for conduit 1503
 routime_step = 10 # routing timestep in seconds
