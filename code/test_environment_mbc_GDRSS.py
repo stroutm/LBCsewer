@@ -6,12 +6,12 @@ import pickle
 
 # Weighting parameters
 beta = 1.0 # upstream depth
-epsilons = [100.0] # downstream flow
+epsilons = [100.0,10.0] # downstream flow
 gammas = [0.0] # downstream flow derivative
 zetas = [0.0] # downstream TSS loading
 
 # Downstream setpoints
-setptFlow = 0.1 # normalized to max_depth
+setptFlow = 0.3 # normalized to max_depth
 setptFlowDeriv = 0.0
 setptTSSload = 0.0
 
@@ -23,26 +23,29 @@ deriv = 0 # 1 to control for flow derivative; 0 otherwise
 TSS = 0 # 1 to control for TSS; 0 otherwise
 
 # Plotting/saving specifications
-save = 0 # 1 to save results; 0 otherwise
-saveName = 'iter19'
+save = 1 # 1 to save results; 0 otherwise
+saveNames = ['iter04','iter04_a','iter04_b']
+    # first should be no control simulation name;
+    # all others should be for control simulations
 plot = 1 # 1 to plot results; 0 otherwise
 linestyles = ['-','-.'] # linestyles for different parameter trials
-colors = ['#00a650','#008bff','#ff4a00','#ffb502'] # colors for each upstream asset
-ustream_labels = ['ISD007','ISD008','ISD009','ISD010']
+colors = ['#00a650','#008bff','#ff4a00','#ffb502','#9200cc']
+        # colors for each upstream asset
+ustream_labels = ['ISD006','ISD007','ISD008','ISD009','ISD010']
 noControl = 1 # 1 to include no control simulation; 0 otherwise
 
 # States to pull from simulation (must include upstream and downstream states
 # for control objectives)
 state_space = {"depthsN":[],
-                "depthsL":["2180","2190","2198","2220"],
-                "flows":["21700"],
+                "depthsL":["2150","2180","2190","2198","2220"],
+                "flows":["21450"],
                 "inflows":[]}
 n_tanks = len(state_space['depthsL']) # number of upstream tanks/conduits
-control_points = ["ISD007_DOWN","ISD008_DOWN","ISD009_DOWN","ISD010_DOWN",
-                    "ISD007_UP","ISD008_UP","ISD009_UP","ISD010_UP"]
-max_depths = [15.5,15.5,15.5,12.25] # upstream tanks/conduits max depths for
+control_points = ["ISD006_DOWN","ISD007_DOWN","ISD008_DOWN","ISD009_DOWN","ISD010_DOWN",
+                    "ISD006_UP","ISD007_UP","ISD008_UP","ISD009_UP","ISD010_UP"]
+max_depths = [15.5,15.5,15.5,15.5,12.25] # upstream tanks/conduits max depths for
                             # normalization
-max_flow = 143 # downstream max flow for normalization;
+max_flow = 158 # downstream max flow for normalization;
                 # 585 peak flow for no control for conduit 1503;
                 # 1193.0455 as calculated for conduit 1503
 routime_step = 10 # routing timestep in seconds
@@ -104,7 +107,7 @@ if noControl == 1:
     print('Done with no control')
 
 if save == 1:
-    fileName = '../data/results/no_control/' + saveName + '.pkl'
+    fileName = '../data/results/no_control/' + saveNames[0] + '.pkl'
     with open(fileName,'w') as f:
         pickle.dump([state_space,ustream_depths,dstream_flow],f)
     print('No control results saved')
@@ -268,12 +271,12 @@ for epsilon in epsilons:
                     ', gamma = ' + str(gamma) + ', zeta = ' + str(zeta))
 
             if save == 1:
-                fileName = '../data/results/control/' + saveName + '.pkl'
+                fileName = '../data/results/control/' + saveNames[k+1] + '.pkl'
                 with open(fileName,'w') as f:
                     pickle.dump([beta,epsilon,gamma,zeta,setptFlow,setptFlowDeriv,
                                 setptTSSload,repTot,contType,state_space,control_points,
-                                max_flow,ustream_depths,dstream_flow,demands,price,gates]
-                                ,f)
+                                max_flow,ustream_depths,dstream_flow,demands,price,gates],
+                                f)
                 print('MBC results saved')
 
 if plot == 1:
