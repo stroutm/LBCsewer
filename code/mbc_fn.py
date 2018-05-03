@@ -17,7 +17,7 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
             h2i = Qi/(0.61*1*np.sqrt(2*9.81*ustream[i]))
             action[i] = max(min(h2i/2,1.0),0.0)
         if ustream[i] > 0.95:
-            action[i] = 1.0
+            action[i] += 0.2
 
     return p, PD, PS, action
 
