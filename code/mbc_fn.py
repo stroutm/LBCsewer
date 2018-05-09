@@ -21,6 +21,7 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
             action[i] = 0.0
         if ustream[i] > 0.95:
             action[i] += 0.2
+        action[i] = max(action[i],1.0)
 
     return p, PD, PS, action
 
