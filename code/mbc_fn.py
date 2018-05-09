@@ -1,27 +1,30 @@
 import numpy as np
 
-def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
+def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow):
     p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
     PS = sum(PD)
     for i in range(0,n_tanks):
-        if PS == 0:
-            Qi = 0
+        if PD[i] >= p:
+            if PS == 0:
+                Qi = 0
+            else:
+                Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
+            if ustream[i] == 0:
+                action[i] = 0.5
+            else:
+                h2i = Qi/(discharge*1*np.sqrt(2*9.81*ustream[i]))
+                action[i] = max(min(h2i/2,1.0),0.0)
         else:
-            Qi = PD[i]/PS*setpts[0] # setpts[0] assumed to be downstream flow setpoint
-        if ustream[i] == 0:
-            action[i] = 0.5
-        else:
-            h2i = Qi/(0.61*1*np.sqrt(2*9.81*ustream[i]))
-            action[i] = max(min(h2i/2,1.0),0.0)
+            action[i] = 0.0
         if ustream[i] > 0.95:
             action[i] += 0.2
 
     return p, PD, PS, action
 
-def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
+def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge):
     p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
@@ -37,7 +40,7 @@ def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action):
         #    action[i] = 0.0
         #    action[i+n_tanks] = 1.0
         #else:
-        #    h2i = Qi/(0.61*1*np.sqrt(2*9.81*ustream[i]))
+        #    h2i = Qi/(discharge*1*np.sqrt(2*9.81*ustream[i]))
         #    action[i] = max(min(h2i/2,1.0),0.0)
         #    if action[i] >= 0.5:
         #        action[i] = 1.0
