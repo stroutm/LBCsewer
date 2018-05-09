@@ -11,7 +11,8 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
             if PS == 0:
                 Qi = 0
             else:
-                Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
+                #Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
+                Qi = sum(PD[0:i+1])/PS*setpts[0]*max_flow # for cascading flows from upstream branch
             if ustream[i] == 0:
                 action[i] = 0.5
             else:
