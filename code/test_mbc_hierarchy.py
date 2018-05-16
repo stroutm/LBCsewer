@@ -9,7 +9,10 @@ beta = 1.0 # upstream flow
 epsilon = 100.0 # downstream flow
 
 # Downstream setpoints
+setptMethod = "automatic" # "manual" to use setpoints established below;
+                #"automatic" to determine setpoints for each branch using MBC and setpt_WRRF
 setpts = [0.2,0.3,0.2] # same order as branches in n_ISDs
+setpt_WRRF = 0.2 # setpoint for flow at WRRF
 
 # Control specifications
 contType = "continuous" # "binary" {0,1} or "continuous" [0,1] gate openings
@@ -103,6 +106,21 @@ if control == 1:
         PDs = np.zeros(sum(n_ISDs))
         PSs = np.zeros(n_trunkline)
         ps = np.zeros(n_trunkline)
+
+        if setptMethod == "automatic":
+            ustream = state[0,-n_trunkline:]/max_flow_dstream
+            dstream = np.array([state[0,-n_trunkline-1]/max_flow_WRRF])
+            setpt = np.array([setpt_WRRF])
+            uparam = beta
+            dparam = epsilon
+            act_b = np.zeros(n_trunkline)
+            p_b, PD_b, PS_b, act_b = mbc(ustream, dstream, setpt, uparam,
+                                    dparam, n_trunkline, act_b, discharge, max_flow_WRRF)
+            if PS_b == 0:
+                setpts = np.zeros(n_trunkline)
+            else:
+                setpts = PD_b/PS_b*setpt_WRRF*max_flow_WRRF/max_flow_dstream
+
         for b in range(0,n_trunkline):
             ustream = state[0,sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
             dstream = np.array([state[0,-n_trunkline+b]/max_flow_dstream[b]])
@@ -132,6 +150,7 @@ if control == 1:
             demands = PDs
             supply = PSs
             gates = action
+            setpts_all = setpts
         else:
             ustream_depths = np.vstack((ustream_depths,state[0][0:sum(n_ISDs)]/max_depths))
             WRRF_flow = np.vstack((WRRF_flow,state[0][sum(n_ISDs)]/max_flow_WRRF))
@@ -140,6 +159,8 @@ if control == 1:
             demands = np.vstack((demands,PDs))
             supply = np.vstack((supply,PSs))
             gates = np.vstack((gates,action))
+            setpts_all = np.vstack((setpts_all,setpts))
+
     if plot == 1:
         for a in range(0,sum(n_ISDs)):
             plt.subplot(321)
@@ -174,20 +195,22 @@ if control == 1:
 
     print("Done with MBC")
 
-
 if plot == 1:
     plt.subplot(321)
     plt.ylabel('Upstream Normalized Conduit Depth')
     plt.legend()
 
     plt.subplot(322)
+    if setptMethod == "automatic":
+        plt.plot(setpt_WRRF*np.ones(len(WRRF_flow)), color = 'k', label = 'Setpoint')
     plt.ylabel('WRRF Normalized Flow')
     plt.legend()
 
     plt.subplot(324)
     for q in range(0,n_trunkline):
-        plt.plot(setpts[q]*np.ones(len(dstream_flows)),
-                    label = "Setpoint, branch " + str(q+1), color = 'k')
+        plt.plot(setpts_all[:,q],
+                    label = "Setpoint, " + state_space['flows'][q+1],
+                    color = colors[q], linestyle = ':')
     plt.ylabel('Normalized Trunkline Flows')
     plt.legend()
 
