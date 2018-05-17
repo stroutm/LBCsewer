@@ -12,7 +12,7 @@ epsilon = 100.0 # downstream flow
 setptMethod = "automatic" # "manual" to use setpoints established below;
                 #"automatic" to determine setpoints for each branch using MBC and setpt_WRRF
 setpts = [0.2,0.3,0.2] # same order as branches in n_ISDs
-setpt_WRRF = 0.2 # setpoint for flow at WRRF
+setpt_WRRF = 0.3 # setpoint for flow at WRRF
 
 # Control specifications
 contType = "continuous" # "binary" {0,1} or "continuous" [0,1] gate openings
@@ -55,8 +55,9 @@ max_depths = [11.5,10.5,15.5,
                 # should be in same order as "depthsL" in state_space
 max_flow_WRRF = 1000 # max flow for normalization of most downstream point
 max_flow_dstream = [374,244,412]
+# all of the max_flows are redefined after no control case
 routime_step = 10 # routing timestep in seconds
-discharge = 1.0 # discharge coefficient of orifices
+discharge = 0.61 # discharge coefficient of orifices
 
 # Input file, state space, and control points
 env = Env("../data/input_files/GDRSS/GDRSS_simple3_ISD_Rework_GJE_edit_SCT_delete234.inp",
@@ -70,12 +71,19 @@ if noControl == 1:
         state, done = env.step(np.hstack((np.ones(sum(n_ISDs)),np.zeros(sum(n_ISDs)))))
         if j == 1:
             ustream_depths = state[0][0:sum(n_ISDs)]/max_depths
-            WRRF_flow = state[0][sum(n_ISDs)]/max_flow_WRRF
-            dstream_flows = state[0][sum(n_ISDs)+1:sum(n_ISDs)+n_trunkline+1]/max_flow_dstream
+            WRRF_flow = state[0][sum(n_ISDs)]
+            dstream_flows = state[0][sum(n_ISDs)+1:sum(n_ISDs)+n_trunkline+1]
         else:
             ustream_depths = np.vstack((ustream_depths,state[0][0:sum(n_ISDs)]/max_depths))
-            WRRF_flow = np.vstack((WRRF_flow,state[0][sum(n_ISDs)]/max_flow_WRRF))
-            dstream_flows = np.vstack((dstream_flows,state[0][sum(n_ISDs)+1:sum(n_ISDs)+n_trunkline+1]/max_flow_dstream))
+            WRRF_flow = np.vstack((WRRF_flow,state[0][sum(n_ISDs)]))
+            dstream_flows = np.vstack((dstream_flows,state[0][sum(n_ISDs)+1:sum(n_ISDs)+n_trunkline+1]))
+
+    max_flow_WRRF = max(WRRF_flow)
+    WRRF_flow = WRRF_flow/max_flow_WRRF
+    for q in range(0,n_trunkline):
+        max_flow_dstream[q] = max(dstream_flows[:,q])
+        dstream_flows[:,q] = dstream_flows[:,q]/max_flow_dstream[q]
+
     if plot == 1:
         plt.subplot(321)
         for a in range(0,sum(n_ISDs)):
