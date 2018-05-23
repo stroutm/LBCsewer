@@ -1,6 +1,16 @@
 import numpy as np
+from orifice_testing import get_target_setting_2
 
-def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow):
+def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks):
+    p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
+    PD = np.zeros(n_tanks)
+    for i in range(0,n_tanks):
+        PD[i] = max(-p + uparam*ustream[i],0)
+    PS = sum(PD)
+
+    return p, PD, PS
+
+def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert):
     p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
@@ -11,13 +21,9 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
             if PS == 0:
                 Qi = 0
             else:
-                #Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
-                Qi = sum(PD[0:i+1])/PS*setpts[0]*max_flow # for cascading flows from upstream branch
-            if ustream[i] == 0:
-                action[i] = 0.5
-            else:
-                h2i = Qi/(discharge*1*np.sqrt(2*9.81*ustream[i]))
-                action[i] = max(min(h2i/2,1.0),0.0)
+                Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
+
+            action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
         else:
             action[i] = 0.0
         if ustream[i] > 0.95:
