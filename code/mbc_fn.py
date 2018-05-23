@@ -1,5 +1,5 @@
 import numpy as np
-from orifice_testing import get_target_setting_2
+from orifice_testing import get_target_setting
 
 def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks):
     p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
