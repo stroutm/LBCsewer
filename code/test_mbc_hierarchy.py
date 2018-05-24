@@ -4,17 +4,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 
-ISDs = [11,6,2] # ISDs to use for MBC
+ISDs = [13,12,11,10,9,8,7,6,4,3,2] # ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
+n_trunkline = 3 # number of main trunkline branches
+n_ISDs = [3,5,3] # array with number of ISD along each main trunkline branch
+                # (from most upstream trunkline branch to most downstream)
 
 # Weighting parameters
 beta = 1.0 # upstream flow
 epsilon = 100.0 # downstream flow
 
 # Downstream setpoints
-setptMethod = "manual" # "manual" to use setpoints established below;
+setptMethod = "automatic" # "manual" to use setpts array established below;
                 #"automatic" to determine setpoints for each branch using MBC and setpt_WRRF
-setpts = [0.48,0.2,0.25] # same order as branches in n_ISDs
-setpt_WRRF = 1.0 # setpoint for flow at WRRF
+setptThres = 1 # 1 if not to exceed setpt; 0 if to achieve setpt
+setpts = [0.4,0.4,0.4] # same order as branches in n_ISDs
+setpt_WRRF = 0.4 # setpoint for flow at WRRF
 
 # Control specifications
 contType = "continuous" # "binary" {0,1} or "continuous" [0,1] gate openings
@@ -22,16 +26,13 @@ save = 0 # 1 to save results; 0 otherwise
 saveNames = ['check']
 plot = 1 # 1 to plot results; 0 otherwise
 colors = ['#00a650','#008bff','#ff4a00','#ffb502','#9200cc','#b4e300','#ff03a0','#00e3ce','#0011ab','#a40000','#996f3d']
-noControl = 1 # 1 to include no control simulation; 0 otherwise
+noControl = 0 # 1 to include no control simulation; 0 otherwise
 control = 1 # 1 to include control simulation; 0 otherwise
 
-n_trunkline = 3 # number of main trunkline branches
-n_ISDs = [1,1,1]#[3,5,3] # array with number of ISD along each main trunkline branch
-                # (from most upstream trunkline branch to most downstream)
 units = "english" # "english" for English units in .inp file; "metric" otherwise
 shapes = "rectangular"
-max_flow_WRRF = 1000 # max flow for normalization of most downstream point
-max_flow_dstream = [374,244,412]
+max_flow_WRRF = 534.852 # max flow for normalization of most downstream point
+max_flow_dstream = [288.145,155.617,198.472]
 # all of the max_flows are redefined after no control case if run
 routime_step = 10 # routing timestep in seconds
 discharge = 0.61 # discharge coefficient of orifices
@@ -159,11 +160,12 @@ if control == 1:
             uparam = beta
             dparam = epsilon
             orifice_diam = np.ones(n_trunkline)
-            p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline)
+            p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
             if PS_b == 0:
                 setpts = np.zeros(n_trunkline)
             else:
                 setpts = PD_b/PS_b*setpt_WRRF*max_flow_WRRF/max_flow_dstream
+                #setpts = PD_b/PS_b*min(setpt_WRRF,dstream[0])*max_flow_WRRF/max_flow_dstream
 
         for b in range(0,n_trunkline):
             ustream = state[0,2*sum(n_ISDs)+sum(n_ISDs[0:b]):2*sum(n_ISDs)+sum(n_ISDs[0:b+1])]/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
@@ -179,14 +181,15 @@ if control == 1:
             orifice_diam = orifice_diam_all[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
             if contType == "binary":
                 p, PD, PS, action_sub = mbc_bin(ustream, dstream, setpt, uparam,
-                                            dparam, n_ISDs[b], action_sub, discharge)
+                                            dparam, n_ISDs[b], action_sub, discharge, setptThres)
             elif contType == "continuous":
                 p, PD, PS, action_sub = mbc(ustream, dstream, setpt, uparam,
                                         dparam, n_ISDs[b], action_sub, discharge,
                                         max_flow_dstream[b], units, orifice_diam,
                                         shapes, ustream_node_depths, dstream_node_depths,
                                         uInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
-                                        dInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
+                                        dInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
+                                        setptThres)
             action[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = action_sub[:len(action_sub)/2]
             action[sum(n_ISDs[0:b])+sum(n_ISDs):sum(n_ISDs[0:b+1])+sum(n_ISDs)] = action_sub[len(action_sub)/2:]
             PDs[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = PD
@@ -238,9 +241,9 @@ if control == 1:
             plt.plot(dstream_flows[:,a],
                         label = "MBC, " + state_space['flows'][a+1],
                         color = colors[a], linestyle = '-')
-            plt.plot(setpts_all[:,q],
-                        label = "Setpoint, " + state_space['flows'][q+1],
-                        color = colors[q], linestyle = ':')
+            plt.plot(setpts_all[:,a],
+                        label = "Setpoint, " + state_space['flows'][a+1],
+                        color = colors[a], linestyle = ':')
 
             plt.subplot(326)
             plt.plot(price[:,a],

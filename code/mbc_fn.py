@@ -1,8 +1,11 @@
 import numpy as np
 from orifice_testing import get_target_setting
 
-def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks):
-    p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
+def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
+    if setptThres == 1:
+        p = (sum(uparam*ustream) + sum(dparam*np.maximum(dstream-setpts,np.zeros(len(dstream)))))/(1 + n_tanks)
+    else:
+        p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
@@ -10,8 +13,11 @@ def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks):
 
     return p, PD, PS
 
-def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert):
-    p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
+def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres):
+    if setptThres == 1:
+        p = (sum(uparam*ustream) + sum(dparam*np.maximum(dstream-setpts,np.zeros(len(dstream)))))/(1 + n_tanks)
+    else:
+        p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
@@ -32,8 +38,11 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
 
     return p, PD, PS, action
 
-def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge):
-    p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
+def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, setptThres):
+    if setptThres == 1:
+        p = (sum(uparam*ustream) + sum(dparam*np.maximum(dstream-setpts,np.zeros(len(dstream)))))/(1 + n_tanks)
+    else:
+        p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
