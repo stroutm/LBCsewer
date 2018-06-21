@@ -103,7 +103,7 @@ if (4 in ISDs) or (3 in ISDs) or (2 in ISDs):
 colors.append('#66747c')
 
 # Input file, state space, and control points
-env = Env("../data/input_files/GDRSS/GDRSS_simple3_ISD_Rework_GJE_edit_SCT_delete234.inp",
+env = Env("../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs.inp",
         state_space,
         control_points)
 
