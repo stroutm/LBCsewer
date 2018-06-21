@@ -50,3 +50,4 @@ class Env:
         # Start the next simulation
         self.sim._model.swmm_open()
         self.sim._model.swmm_start()
+        self.time = 1.0

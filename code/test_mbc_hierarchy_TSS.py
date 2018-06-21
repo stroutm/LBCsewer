@@ -1,5 +1,5 @@
 from environment_mbc_wq import Env
-from mbc_fn import mbc, mbc_noaction, mbc_bin, perf, TSScalc
+from mbc_fn import mbc, mbc_noaction, mbc_bin, perf
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -18,8 +18,8 @@ setptMethod = "automatic" # "manual" to use setpts array established below;
                 #"automatic" to determine setpoints for each branch using MBC and setpt_WRRF
 setptThres = 0 # 1 if not to exceed setpt; 0 if to achieve setpt
 setpts = [0.4,0.5,0.3] # same order as branches in n_ISDs
-#objType = "flow"; setpt_WRRF = 0.4 # setpoint for flow at WRRF
-objType = "TSS"; setpt_WRRF = 0.1 # setpoint for TSS at WRRF
+objType = "flow"; setpt_WRRF = 0.5 # setpoint for flow at WRRF
+#objType = "TSS"; setpt_WRRF = 0.5 # setpoint for TSS at WRRF
 
 # Control specifications
 contType = "continuous" # "binary" {0,1} or "continuous" [0,1] gate openings
@@ -30,14 +30,14 @@ normalize = 0 # 1 to normalize downstream flows for plotting; 0 otherwise
 #colors = ['#00a650','#008bff','#ff4a00','#ffb502','#9200cc','#b4e300','#ff03a0','#00e3ce','#0011ab','#a40000','#996f3d']
 colors = []
 labels = []
-noControl = 0 # 1 to include no control simulation; 0 otherwise
+noControl = 1 # 1 to include no control simulation; 0 otherwise
 control = 1 # 1 to include control simulation; 0 otherwise
 
 units = "english" # "english" for English units in .inp file; "metric" otherwise
 shapes = "rectangular"
-max_flow_WRRF = 534.852 # max flow for normalization of most downstream point
-max_flow_dstream = [288.145,155.617,198.472]
-max_TSSLoad_WRRF = 0.45
+max_flow_WRRF = 536.684 # max flow for normalization of most downstream point
+max_flow_dstream = [287.939,154.492,198.450]
+max_TSSLoad_WRRF = 0.469
 # all of the max_flows are redefined after no control case if run
 routime_step = 10 # routing timestep in seconds
 discharge = 0.61 # discharge coefficient of orifices
@@ -142,6 +142,8 @@ if noControl == 1:
             WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
 
     max_flow_WRRF = max(WRRF_flow)
+    for e in range(0,n_trunkline):
+        max_flow_dstream[e] = max(dstream_flows[:,e])
     max_TSSLoad_WRRF = max(WRRF_TSSLoad)
     if normalize == 1:
         WRRF_flow = WRRF_flow/max_flow_WRRF
@@ -175,7 +177,6 @@ if noControl == 1:
         with open(fileName,'w') as f:
             pickle.dump([time,ustream_depths,WRRF_flow,TSSWRRFLoad_all,dstream_flows],f)
         print('No control results saved')
-        print(done)
 
 if control == 1:
     env.reset()
@@ -220,7 +221,6 @@ if control == 1:
                 setpts = np.zeros(n_trunkline)
             else:
                 setpts = PD_b/PS_b*setpt_WRRF*max_flow_WRRF/max_flow_dstream
-                #setpts = PD_b/PS_b*min(setpt_WRRF,dstream[0])*max_flow_WRRF/max_flow_dstream
 
         for b in range(0,n_trunkline):
             branch_depths = []
@@ -342,7 +342,7 @@ if control == 1:
         for a in range(0,n_trunkline):
             plt.subplot(324)
             if normalize == 1:
-                plt.plot(time,dstream_flows[:,a],
+                plt.plot(time,dstream_flows[:,a]/max_flow_dstream[a],
                         label = "MBC, " + labels[a-n_trunkline],
                         color = colors[a-n_trunkline-1], linestyle = '-')
                 if objType == "flow":
@@ -350,7 +350,7 @@ if control == 1:
                             label = "Setpoint, " + labels[a-n_trunkline],
                             color = colors[a-n_trunkline-1], linestyle = '--')
             else:
-                plt.plot(time,max_flow_dstream[a]*dstream_flows[:,a],
+                plt.plot(time,dstream_flows[:,a],
                         label = "MBC, " + labels[a-n_trunkline],
                         color = colors[a-n_trunkline-1], linestyle = '-')
                 if objType == "flow":
