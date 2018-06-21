@@ -1,4 +1,4 @@
-from environment_mbc import Env
+from environment_mbc_wq import Env
 from mbc_fn import mbc, mbc_noaction, mbc_bin, perf, TSScalc
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,24 +19,25 @@ setptMethod = "automatic" # "manual" to use setpts array established below;
 setptThres = 0 # 1 if not to exceed setpt; 0 if to achieve setpt
 setpts = [0.4,0.5,0.3] # same order as branches in n_ISDs
 #objType = "flow"; setpt_WRRF = 0.4 # setpoint for flow at WRRF
-objType = "TSS"; setpt_WRRF = 1.0 # setpoint for TSS at WRRF
+objType = "TSS"; setpt_WRRF = 0.1 # setpoint for TSS at WRRF
 
 # Control specifications
 contType = "continuous" # "binary" {0,1} or "continuous" [0,1] gate openings
 save = 0 # 1 to save results; 0 otherwise
 saveNames = ['TSS']
-plot = 0 # 1 to plot results; 0 otherwise
+plot = 1 # 1 to plot results; 0 otherwise
 normalize = 0 # 1 to normalize downstream flows for plotting; 0 otherwise
 #colors = ['#00a650','#008bff','#ff4a00','#ffb502','#9200cc','#b4e300','#ff03a0','#00e3ce','#0011ab','#a40000','#996f3d']
 colors = []
 labels = []
-noControl = 1 # 1 to include no control simulation; 0 otherwise
+noControl = 0 # 1 to include no control simulation; 0 otherwise
 control = 1 # 1 to include control simulation; 0 otherwise
 
 units = "english" # "english" for English units in .inp file; "metric" otherwise
 shapes = "rectangular"
 max_flow_WRRF = 534.852 # max flow for normalization of most downstream point
 max_flow_dstream = [288.145,155.617,198.472]
+max_TSSLoad_WRRF = 0.45
 # all of the max_flows are redefined after no control case if run
 routime_step = 10 # routing timestep in seconds
 discharge = 0.61 # discharge coefficient of orifices
@@ -103,77 +104,48 @@ if (4 in ISDs) or (3 in ISDs) or (2 in ISDs):
 
 colors.append('#66747c')
 
-# Input file, state space, and control points
-env = Env("../data/input_files/GDRSS/GDRSS_simple3_ISD_Rework_GJE_edit_SCT_delete234.inp",
-        state_space,
-        control_points)
+# Input file
+env = Env("../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS.inp")
 
 if noControl == 1:
     done = False; j = 0
+    ustream_depths = []
+    dstream_flows = []
     while not done:
         if j == 0:
             time = j/8640.
         else:
             time = np.vstack((time,j/8640.))
         j += 1
-        state, done = env.step(np.hstack((np.ones(sum(n_ISDs)),np.zeros(sum(n_ISDs)))))
-        RO13 = state[0][37]; RO12 = sum(state[0][38:41]); RO11 = sum(state[0][41:45]); RO10 = sum(state[0][45:47])
-        RO09 = sum(state[0][47:49]); RO06 = sum(state[0][49:51]); RO04 = sum(state[0][51:55]); RO03 = state[0][55]
-        RO02 = state[0][56]
-        outf13 = state[0][57]; outf12 = state[0][58]; outf11 = state[0][59]; outf10 = state[0][60]
-        outf09 = state[0][61]; outf08 = state[0][62]; outf07 = state[0][63]; outf06 = state[0][64]
-        outf04 = state[0][65]; outf03 = state[0][66]; outf02 = state[0][67]
+        done = env.step()
 
         if j == 1:
-            ustream_depths = state[0][22:33]/max_depths
-            WRRF_flow = state[0][33]
-            dstream_flows = state[0][34:37]
-            tankDepthPrev13 = 0; tankDepthPrev12 = 0; tankDepthPrev11 = 0; tankDepthPrev10 = 0
-            tankDepthPrev09 = 0; tankDepthPrev08 = 0; tankDepthPrev07 = 0; tankDepthPrev06 = 0
-            tankDepthPrev04 = 0; tankDepthPrev03 = 0; tankDepthPrev02 = 0
+            for e in range(0,len(state_space["depthsL"])):
+                ustream_depths = np.hstack((ustream_depths,env.depthL(state_space["depthsL"][e])/max_depths[e]))
+            for e in range(1,len(state_space["flows"])):
+                dstream_flows = np.hstack((dstream_flows,env.flow(state_space["flows"][e])))
+            WRRF_flow = env.flow(state_space["flows"][0])
+            WRRF_TSS = env.get_pollutant_link(state_space["flows"][0])
+            WRRF_TSSLoad = WRRF_flow * WRRF_TSS * 0.000062428
 
         else:
-            ustream_depths = np.vstack((ustream_depths,state[0][22:33]/max_depths))
-            WRRF_flow = np.vstack((WRRF_flow,state[0][33]))
-            dstream_flows = np.vstack((dstream_flows,state[0][34:37]))
-            tankDepthPrev13 = ustream_depths[-2][0]*max_depths[0]
-            tankDepthPrev12 = ustream_depths[-2][1]*max_depths[1]
-            tankDepthPrev11 = ustream_depths[-2][2]*max_depths[2]
-            tankDepthPrev10 = ustream_depths[-2][3]*max_depths[3]
-            tankDepthPrev09 = ustream_depths[-2][4]*max_depths[4]
-            tankDepthPrev08 = ustream_depths[-2][5]*max_depths[5]
-            tankDepthPrev07 = ustream_depths[-2][6]*max_depths[6]
-            tankDepthPrev06 = ustream_depths[-2][7]*max_depths[7]
-            tankDepthPrev04 = ustream_depths[-2][8]*max_depths[8]
-            tankDepthPrev03 = ustream_depths[-2][9]*max_depths[9]
-            tankDepthPrev02 = ustream_depths[-2][10]*max_depths[10]
-
-        TSS13 = TSScalc(1, state[0][22]*max_depths[0], tankDepthPrev13, state[0][57], RO13, 0.0624, routime_step)
-        TSS12 = TSScalc(1, state[0][23]*max_depths[1], tankDepthPrev12, state[0][58], RO12, 0.0624, routime_step)
-        TSS11 = TSScalc(1, state[0][24]*max_depths[2], tankDepthPrev11, state[0][59], RO11+state[0][57]+state[0][58], (0.0624*RO11+TSS13*state[0][57]+TSS12*state[0][58])/(RO11+state[0][57]+state[0][58]), routime_step)
-        TSS10 = TSScalc(1, state[0][25]*max_depths[3], tankDepthPrev10, state[0][60], RO10, 0.0624, routime_step)
-        TSS09 = TSScalc(1, state[0][26]*max_depths[4], tankDepthPrev09, state[0][61], (RO09+state[0][60]), (0.0624*RO09+TSS10*state[0][60])/(RO09+state[0][60]), routime_step)
-        TSS08 = TSScalc(1, state[0][27]*max_depths[5], tankDepthPrev08, state[0][62], state[0][61], TSS09, routime_step)
-        TSS07 = TSScalc(1, state[0][28]*max_depths[6], tankDepthPrev07, state[0][63], state[0][62], TSS08, routime_step)
-        TSS06 = TSScalc(1, state[0][29]*max_depths[7], tankDepthPrev06, state[0][64], (RO06+state[0][63]), (0.0624*RO06+TSS07*state[0][63])/(RO06+state[0][63]), routime_step)
-        TSS04 = TSScalc(1, state[0][30]*max_depths[8], tankDepthPrev04, state[0][65], RO04, 0.0624, routime_step)
-        TSS03 = TSScalc(1, state[0][31]*max_depths[9], tankDepthPrev03, state[0][66], RO03, 0.0624, routime_step)
-        TSS02 = TSScalc(1, state[0][32]*max_depths[10], tankDepthPrev02, state[0][67], (RO02+state[0][65]+state[0][66]), (0.0624*RO02+TSS04*state[0][65]+TSS03*state[0][66])/(RO02+state[0][65]+state[0][66]), routime_step)
-        TSSWRRFLoad = TSS11*state[0][34]+TSS06*state[0][35]+TSS02*state[0][36]
-        TSSWRRF = TSSWRRFLoad/sum(state[0][34:37])
-
-        if j == 1:
-            TSSWRRFLoad_all = TSSWRRFLoad
-        else:
-            TSSWRRFLoad_all = np.vstack((TSSWRRFLoad_all,TSSWRRFLoad))
+            ustream_depths_tmp = []
+            for e in range(0,len(state_space["depthsL"])):
+                ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(state_space["depthsL"][e])/max_depths[e]))
+            ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
+            dstream_flows_tmp = []
+            for e in range(1,len(state_space["flows"])):
+                dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(state_space["flows"][e])))
+            dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
+            WRRF_flow = np.vstack((WRRF_flow,env.flow(state_space["flows"][0])))
+            WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(state_space["flows"][0])))
+            WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
 
     max_flow_WRRF = max(WRRF_flow)
+    max_TSSLoad_WRRF = max(WRRF_TSSLoad)
     if normalize == 1:
         WRRF_flow = WRRF_flow/max_flow_WRRF
-    for q in range(0,n_trunkline):
-        max_flow_dstream[q] = max(dstream_flows[:,q])
-        if normalize == 1:
-            dstream_flows[:,q] = dstream_flows[:,q]/max_flow_dstream[q]
+        WRRF_TSSLoad = WRRF_TSSLoad/max_TSSLoad_WRRF
 
     if plot == 1:
         plt.subplot(321)
@@ -187,7 +159,7 @@ if noControl == 1:
                     linestyle = ':')
 
         plt.subplot(323)
-        plt.plot(time,TSSWRRFLoad_all, label = "No control, WRRF TSS Load", color = colors[-1],
+        plt.plot(time,WRRF_TSSLoad, label = "No control, WRRF TSS Load", color = colors[-1],
                     linestyle = ':')
 
         plt.subplot(324)
@@ -203,14 +175,14 @@ if noControl == 1:
         with open(fileName,'w') as f:
             pickle.dump([time,ustream_depths,WRRF_flow,TSSWRRFLoad_all,dstream_flows],f)
         print('No control results saved')
+        print(done)
 
 if control == 1:
     env.reset()
     done = False; j = 0
+    ustream_depths = []
+    dstream_flows = []
     action = np.hstack((np.ones(sum(n_ISDs)),np.zeros(sum(n_ISDs))))
-    TSSWRRFLoad = 0.0
-    TSS13 = 0.0; TSS12 = 0.0; TSS11 = 0.0; TSS10 = 0.0; TSS09 = 0.0; TSS08 = 0.0
-    TSS07 = 0.0; TSS06 = 0.0; TSS04 = 0.0; TSS03 = 0.0; TSS02 = 0.0
 
     while not done:
         if j == 0:
@@ -218,27 +190,27 @@ if control == 1:
         else:
             time = np.vstack((time,j/8640.))
         j += 1
-        state, done = env.step(action)
+        done = env.step()
         PDs = np.zeros(sum(n_ISDs))
         PSs = np.zeros(n_trunkline)
         ps = np.zeros(n_trunkline)
 
-        RO13 = state[0][37]; RO12 = sum(state[0][38:41]); RO11 = sum(state[0][41:45]); RO10 = sum(state[0][45:47])
-        RO09 = sum(state[0][47:49]); RO06 = sum(state[0][49:51]); RO04 = sum(state[0][51:55]); RO03 = state[0][55]
-        RO02 = state[0][56]
-        outf13 = state[0][57]; outf12 = state[0][58]; outf11 = state[0][59]; outf10 = state[0][60]
-        outf09 = state[0][61]; outf08 = state[0][62]; outf07 = state[0][63]; outf06 = state[0][64]
-        outf04 = state[0][65]; outf03 = state[0][66]; outf02 = state[0][67]
-
         if setptMethod == "automatic":
-            #ustream = state[0,-n_trunkline:]/max_flow_dstream # dstream flows at branch/trunkline
-            ustream = np.zeros(n_trunkline) # max fullness of storage along branches
+            ustream = np.zeros(n_trunkline)
             for b in range(0,n_trunkline):
-                ustream[b] = max(state[0,2*sum(n_ISDs)+sum(n_ISDs[0:b]):2*sum(n_ISDs)+sum(n_ISDs[0:b+1])]/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
+                branch_depths = []
+                for e in range(0,n_ISDs[b]):
+                    branch_depths = np.hstack((branch_depths,env.depthL(state_space["depthsL"][sum(n_ISDs[0:b])+e])))
+                ustream[b] = max(branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
             if objType == "flow":
-                dstream = np.array([state[0,3*sum(n_ISDs)]/max_flow_WRRF]) # WRRF flow
+                WRRF_flow_tmp = env.flow(state_space["flows"][0])
+                dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
             elif objType == "TSS":
-                dstream = np.array([TSSWRRFLoad])
+                WRRF_flow_tmp = env.flow(state_space["flows"][0])
+                WRRF_TSS_tmp = env.get_pollutant_link(state_space["flows"][0])
+                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
+
             setpt = np.array([setpt_WRRF])
             uparam = beta
             dparam = epsilon
@@ -250,18 +222,28 @@ if control == 1:
                 setpts = PD_b/PS_b*setpt_WRRF*max_flow_WRRF/max_flow_dstream
                 #setpts = PD_b/PS_b*min(setpt_WRRF,dstream[0])*max_flow_WRRF/max_flow_dstream
 
-        dstreamTSS = [TSS11*state[0][34],TSS06*state[0][35],TSS02*state[0][36]]
         for b in range(0,n_trunkline):
-            ustream = state[0,2*sum(n_ISDs)+sum(n_ISDs[0:b]):2*sum(n_ISDs)+sum(n_ISDs[0:b+1])]/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
+            branch_depths = []
+            for e in range(0,n_ISDs[b]):
+                branch_depths = np.hstack((branch_depths,env.depthL(state_space["depthsL"][sum(n_ISDs[0:b])+e])))
+            ustream = branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
             if objType == "flow":
-                dstream = np.array([state[0,3*sum(n_ISDs)+1+b]/max_flow_dstream[b]])
+                dn_flow_tmp = env.flow(state_space["flows"][b+1])
+                dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
             elif objType == "TSS":
-                dstream = np.array([dstreamTSS[b]])
-            ustream_node_depths = state[0,sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
-            dstream_node_depths = state[0,sum(n_ISDs)+sum(n_ISDs[0:b]):sum(n_ISDs)+sum(n_ISDs[0:b+1])]
+                WRRF_flow_tmp = env.flow(state_space["flows"][b+1])
+                WRRF_TSS_tmp = env.get_pollutant_link(state_space["flows"][b+1])
+                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
+            ustream_node_depths = []
+            dstream_node_depths = []
+            for e in range(0,n_ISDs[b]):
+                ustream_node_depths = np.hstack((ustream_node_depths,env.depthN(state_space["depthsN"][sum(n_ISDs[0:b])+e])))
+                dstream_node_depths = np.hstack((dstream_node_depths,env.depthN(state_space["depthsN"][sum(n_ISDs)+sum(n_ISDs[0:b])+e])))
             setpt = np.array([setpts[b]])
             uparam = beta
             dparam = epsilon
+
             action_sub_down = np.ones(n_ISDs[b])
             action_sub_up = np.zeros(n_ISDs[b])
             action_sub = np.hstack((action_sub_down,action_sub_up))
@@ -283,57 +265,40 @@ if control == 1:
             PSs[b] = PS
             ps[b] = p
 
+            for e in range(0,n_ISDs[b]):
+                env.set_gate(control_points[sum(n_ISDs[0:b])+e], action[sum(n_ISDs[0:b])+e])
+                env.set_gate(control_points[sum(n_ISDs)+sum(n_ISDs[0:b])+e], action[sum(n_ISDs)+sum(n_ISDs[0:b])+e])
+
         if j == 1:
-            ustream_depths = state[0][22:33]/max_depths
-            WRRF_flow = state[0][33]/max_flow_WRRF
-            dstream_flows = state[0][34:37]/max_flow_dstream
-            tankDepthPrev13 = 0; tankDepthPrev12 = 0; tankDepthPrev11 = 0; tankDepthPrev10 = 0
-            tankDepthPrev09 = 0; tankDepthPrev08 = 0; tankDepthPrev07 = 0; tankDepthPrev06 = 0
-            tankDepthPrev04 = 0; tankDepthPrev03 = 0; tankDepthPrev02 = 0
+            for e in range(0,len(state_space["depthsL"])):
+                ustream_depths = np.hstack((ustream_depths,env.depthL(state_space["depthsL"][e])/max_depths[e]))
+            for e in range(1,len(state_space["flows"])):
+                dstream_flows = np.hstack((dstream_flows,env.flow(state_space["flows"][e])))
+            WRRF_flow = env.flow(state_space["flows"][0])
+            WRRF_TSS = env.get_pollutant_link(state_space["flows"][0])
+            WRRF_TSSLoad = WRRF_flow * WRRF_TSS * 0.000062428
             price = ps
             demands = PDs
             supply = PSs
             gates = action
             setpts_all = setpts
         else:
-            ustream_depths = np.vstack((ustream_depths,state[0][22:33]/max_depths))
-            WRRF_flow = np.vstack((WRRF_flow,state[0][33]/max_flow_WRRF))
-            dstream_flows = np.vstack((dstream_flows,state[0][34:37]/max_flow_dstream))
-            tankDepthPrev13 = ustream_depths[-2][0]*max_depths[0]
-            tankDepthPrev12 = ustream_depths[-2][1]*max_depths[1]
-            tankDepthPrev11 = ustream_depths[-2][2]*max_depths[2]
-            tankDepthPrev10 = ustream_depths[-2][3]*max_depths[3]
-            tankDepthPrev09 = ustream_depths[-2][4]*max_depths[4]
-            tankDepthPrev08 = ustream_depths[-2][5]*max_depths[5]
-            tankDepthPrev07 = ustream_depths[-2][6]*max_depths[6]
-            tankDepthPrev06 = ustream_depths[-2][7]*max_depths[7]
-            tankDepthPrev04 = ustream_depths[-2][8]*max_depths[8]
-            tankDepthPrev03 = ustream_depths[-2][9]*max_depths[9]
-            tankDepthPrev02 = ustream_depths[-2][10]*max_depths[10]
+            ustream_depths_tmp = []
+            for e in range(0,len(state_space["depthsL"])):
+                ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(state_space["depthsL"][e])/max_depths[e]))
+            ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
+            dstream_flows_tmp = []
+            for e in range(1,len(state_space["flows"])):
+                dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(state_space["flows"][e])))
+            dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
+            WRRF_flow = np.vstack((WRRF_flow,env.flow(state_space["flows"][0])))
+            WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(state_space["flows"][0])))
+            WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
             price = np.vstack((price,ps))
             demands = np.vstack((demands,PDs))
             supply = np.vstack((supply,PSs))
             gates = np.vstack((gates,action))
             setpts_all = np.vstack((setpts_all,setpts))
-
-        TSS13 = TSScalc(1, state[0][22]*max_depths[0], tankDepthPrev13, state[0][57], RO13, 0.0624, routime_step)
-        TSS12 = TSScalc(1, state[0][23]*max_depths[1], tankDepthPrev12, state[0][58], RO12, 0.0624, routime_step)
-        TSS11 = TSScalc(1, state[0][24]*max_depths[2], tankDepthPrev11, state[0][59], RO11+state[0][57]+state[0][58], (0.0624*RO11+TSS13*state[0][57]+TSS12*state[0][58])/(RO11+state[0][57]+state[0][58]), routime_step)
-        TSS10 = TSScalc(1, state[0][25]*max_depths[3], tankDepthPrev10, state[0][60], RO10, 0.0624, routime_step)
-        TSS09 = TSScalc(1, state[0][26]*max_depths[4], tankDepthPrev09, state[0][61], (RO09+state[0][60]), (0.0624*RO09+TSS10*state[0][60])/(RO09+state[0][60]), routime_step)
-        TSS08 = TSScalc(1, state[0][27]*max_depths[5], tankDepthPrev08, state[0][62], state[0][61], TSS09, routime_step)
-        TSS07 = TSScalc(1, state[0][28]*max_depths[6], tankDepthPrev07, state[0][63], state[0][62], TSS08, routime_step)
-        TSS06 = TSScalc(1, state[0][29]*max_depths[7], tankDepthPrev06, state[0][64], (RO06+state[0][63]), (0.0624*RO06+TSS07*state[0][63])/(RO06+state[0][63]), routime_step)
-        TSS04 = TSScalc(1, state[0][30]*max_depths[8], tankDepthPrev04, state[0][65], RO04, 0.0624, routime_step)
-        TSS03 = TSScalc(1, state[0][31]*max_depths[9], tankDepthPrev03, state[0][66], RO03, 0.0624, routime_step)
-        TSS02 = TSScalc(1, state[0][32]*max_depths[10], tankDepthPrev02, state[0][67], (RO02+state[0][65]+state[0][66]), (0.0624*RO02+TSS04*state[0][65]+TSS03*state[0][66])/(RO02+state[0][65]+state[0][66]), routime_step)
-        TSSWRRFLoad = TSS11*state[0][34]+TSS06*state[0][35]+TSS02*state[0][36]
-        TSSWRRF = TSSWRRFLoad/sum(state[0][34:37])
-
-        if j == 1:
-            TSSWRRFLoad_all = TSSWRRFLoad
-        else:
-            TSSWRRFLoad_all = np.vstack((TSSWRRFLoad_all,TSSWRRFLoad))
 
     if plot == 1:
         for a in range(0,sum(n_ISDs)):
@@ -354,21 +319,25 @@ if control == 1:
 
         plt.subplot(322)
         if normalize == 1:
-            plt.plot(time,WRRF_flow, label = "MBC, WRRF flow", color = colors[-1],
+            plt.plot(time,WRRF_flow/max_flow_WRRF, label = "MBC, WRRF flow", color = colors[-1],
                     linestyle = '-')
             if setptMethod == "automatic" and objType == "flow":
                 plt.plot(time,setpt_WRRF*np.ones(len(WRRF_flow)), color = 'k', label = 'Setpoint')
         else:
-            plt.plot(time,max_flow_WRRF*WRRF_flow, label = "MBC, WRRF flow", color = colors[-1],
+            plt.plot(time,WRRF_flow, label = "MBC, WRRF flow", color = colors[-1],
                     linestyle = '-')
             if setptMethod == "automatic" and objType == "flow":
                 plt.plot(time,max_flow_WRRF*setpt_WRRF*np.ones(len(WRRF_flow)), color = 'k', label = 'Setpoint')
 
         plt.subplot(323)
-        plt.plot(time,TSSWRRFLoad_all, label = "MBC, WRRF TSS Load", color = colors[-1],
+        if normalize == 1:
+            plt.plot(time,WRRF_TSSLoad/max_TSSLoad_WRRF, label = "MBC, WRRF TSS Load", color = colors[-1],
+                    linestyle = '-')
+        else:
+            plt.plot(time,WRRF_TSSLoad, label = "No control, WRRF TSS Load", color = colors[-1],
                     linestyle = '-')
         if setptMethod == "automatic" and objType == "TSS":
-            plt.plot(time,setpt_WRRF*np.ones(len(TSSWRRFLoad_all)), color = 'k', label = 'Setpoint')
+            plt.plot(time,setpt_WRRF*np.ones(len(WRRF_TSSLoad)), color = 'k', label = 'Setpoint')
 
         for a in range(0,n_trunkline):
             plt.subplot(324)
@@ -410,8 +379,8 @@ if plot == 1:
     plt.subplot(322)
     if normalize == 1:
         plt.ylim(0,1)
-    else:
-        plt.ylim(0,600)
+    #else:
+    #    plt.ylim(0,600)
     plt.ylabel('WRRF Flow ($\mathregular{ft^3/s}$)')
     #plt.legend()
 
@@ -423,8 +392,8 @@ if plot == 1:
     plt.ylabel('Branch Flows ($\mathregular{ft^3/s}$)')
     if normalize == 1:
         plt.ylim(0,1)
-    else:
-        plt.ylim(0,300)
+    #else:
+    #    plt.ylim(0,300)
     #plt.legend()
 
     plt.subplot(325)
