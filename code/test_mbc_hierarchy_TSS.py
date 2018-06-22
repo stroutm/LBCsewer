@@ -142,6 +142,7 @@ if noControl == 1:
             WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
 
     max_flow_WRRF = max(WRRF_flow)
+    max_flow_dstream = np.zeros(n_trunkline)
     for e in range(0,n_trunkline):
         max_flow_dstream[e] = max(dstream_flows[:,e])
     max_TSSLoad_WRRF = max(WRRF_TSSLoad)
