@@ -6,13 +6,13 @@ import numpy as np
 import pickle
 
 # Enter ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
-#ISDs = [11,6,2]
-ISDs = [13,12,11,10,9,8,7,6,4,3,2]
+ISDs = [11,6,2]
+#ISDs = [13,12,11,10,9,8,7,6,4,3,2]
 # Enter number of main trunkline branches
 n_trunkline = 3
 # Enter array with number of ISDs along each main trunkline branch, from most
 # upstream branch to most downstream
-n_ISDs = [3,5,3]
+n_ISDs = [1,1,1]
 # Based on ISDs, pulls states, parameters, and control points
 state_space, control_points, max_depths, uInvert, dInvert, orifice_diam_all, colors, labels = GDRSS_build(ISDs)
 # Input file
@@ -35,12 +35,12 @@ setptThres = 0
 setpts = [0.4,0.5,0.3]
 # For objType enter "flow" or "TSS" for downstream setpoint type;
 # for setpt_WRRF enter setpoint to be used if chose "manual" for setptMethod
-objType = "flow"; setpt_WRRF = 0.4
-#objType = "TSS"; setpt_WRRF = 0.0015
+#objType = "flow"; setpt_WRRF = 0.4
+objType = "TSS"; setpt_WRRF = 0.2
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
 # Enter 1 to include no control simulation and 0 otherwise
-noControl = 0
+noControl = 1
 # Enter 1 to include control simulation and 0 otherwise
 control = 1
 
@@ -103,6 +103,8 @@ if noControl == 1:
     if normalize == 1:
         WRRF_flow = WRRF_flow/max_flow_WRRF
         WRRF_TSSLoad = WRRF_TSSLoad/max_TSSLoad_WRRF
+
+    print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
     if plot == 1:
         plt.subplot(321)
@@ -182,10 +184,12 @@ if control == 1:
             branch_depths = []
             ustream_node_depths = []
             dstream_node_depths = []
+            ustream_node_TSSConc = []
             for e in range(0,n_ISDs[b]):
                 branch_depths = np.hstack((branch_depths,env.depthL(state_space["depthsL"][sum(n_ISDs[0:b])+e])))
                 ustream_node_depths = np.hstack((ustream_node_depths,env.depthN(state_space["depthsN"][sum(n_ISDs[0:b])+e])))
                 dstream_node_depths = np.hstack((dstream_node_depths,env.depthN(state_space["depthsN"][sum(n_ISDs)+sum(n_ISDs[0:b])+e])))
+                ustream_node_TSSConc = np.hstack((ustream_node_TSSConc,env.get_pollutant_node(state_space["depthsN"][e])))
             ustream = branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
             if objType == "flow":
                 dn_flow_tmp = env.flow(state_space["flows"][b+1])
@@ -214,7 +218,7 @@ if control == 1:
                                         shapes, ustream_node_depths, dstream_node_depths,
                                         uInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
                                         dInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
-                                        setptThres)
+                                        setptThres, objType, ustream_node_TSSConc)
             action[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = action_sub[:len(action_sub)/2]
             action[sum(n_ISDs[0:b])+sum(n_ISDs):sum(n_ISDs[0:b+1])+sum(n_ISDs)] = action_sub[len(action_sub)/2:]
             PDs[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = PD
@@ -249,6 +253,8 @@ if control == 1:
             supply = np.vstack((supply,PSs))
             gates = np.vstack((gates,action))
             setpts_all = np.vstack((setpts_all,setpts))
+
+    print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
     if plot == 1:
         for a in range(0,sum(n_ISDs)):

@@ -13,7 +13,7 @@ def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
 
     return p, PD, PS
 
-def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres):
+def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres, objType, ustream_TSSConc):
     if setptThres == 1:
         p = (sum(uparam*ustream) + sum(dparam*np.maximum(dstream-setpts,np.zeros(len(dstream)))))/(1 + n_tanks)
     else:
@@ -27,7 +27,13 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
             if PS == 0:
                 Qi = 0
             else:
-                Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
+                if objType == "flow":
+                    Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
+                elif objType == "TSS":
+                    if ustream_TSSConc[i] < 0.01:
+                        Qi = 0
+                    else:
+                        Qi = PD[i]/PS*setpts[0]/ustream_TSSConc[i]/0.000062428
 
             action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
         else:
