@@ -6,13 +6,13 @@ import numpy as np
 import pickle
 
 # Enter ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
-ISDs = [11,6,2]
-#ISDs = [13,12,11,10,9,8,7,6,4,3,2]
+#ISDs = [11,6,2]
+ISDs = [13,12,11,10,9,8,7,6,4,3,2]
 # Enter number of main trunkline branches
 n_trunkline = 3
 # Enter array with number of ISDs along each main trunkline branch, from most
 # upstream branch to most downstream
-n_ISDs = [1,1,1]
+n_ISDs = [3,5,3]
 # Based on ISDs, pulls states, parameters, and control points
 state_space, control_points, max_depths, uInvert, dInvert, orifice_diam_all, colors, labels = GDRSS_build(ISDs)
 # Input file
@@ -48,7 +48,7 @@ control = 1
 # Enter 1 to save results and 0 otherwise
 save = 0
 # Enter filename to save under if save == 1
-saveNames = ['TSS']
+saveNames = ['TSS_HIC2018']
 # Enter 1 to plot results and 0 otherwise
 plot = 1
 # Enter 1 to normalize downstream flows in plots and 0 otherwise
@@ -132,7 +132,7 @@ if noControl == 1:
     if save == 1:
         fileName = '../data/results/no_control/' + saveNames[0] + '.pkl'
         with open(fileName,'w') as f:
-            pickle.dump([time,ustream_depths,WRRF_flow,TSSWRRFLoad_all,dstream_flows],f)
+            pickle.dump([time,ustream_depths,WRRF_flow,WRRF_TSSLoad,dstream_flows],f)
         print('No control results saved')
 
 if control == 1:
@@ -326,7 +326,7 @@ if control == 1:
     if save == 1:
         fileName = '../data/results/control/' + saveNames[0] + '.pkl'
         with open(fileName,'w') as f:
-            pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF,max_flow_WRRF,TSSWRRFLoad_all,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
+            pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF,max_flow_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
         print('Control results saved')
 
 if plot == 1:
