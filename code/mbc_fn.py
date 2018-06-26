@@ -3,9 +3,9 @@ from orifice_testing import get_target_setting
 
 def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
     if setptThres == 1:
-        p = (sum(uparam*ustream) + sum(dparam*np.maximum(dstream-setpts,np.zeros(len(dstream)))))/(1 + n_tanks)
+        p = (sum(uparam*ustream) - sum(dparam*np.maximum(setpts-dstream,np.zeros(len(dstream)))))/(1 + n_tanks)
     else:
-        p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
+        p = (sum(uparam*ustream) - sum(dparam*(setpts-dstream)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
@@ -13,11 +13,11 @@ def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
 
     return p, PD, PS
 
-def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres, objType, ustream_TSSConc):
+def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, max_TSSLoad, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres, objType, ustream_TSSConc):
     if setptThres == 1:
-        p = (sum(uparam*ustream) + sum(dparam*np.maximum(dstream-setpts,np.zeros(len(dstream)))))/(1 + n_tanks)
+        p = (sum(uparam*ustream) - sum(dparam*np.maximum(setpts-dstream,np.zeros(len(dstream)))))/(1 + n_tanks)
     else:
-        p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
+        p = (sum(uparam*ustream) - sum(dparam*(setpts-dstream)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam*ustream[i],0)
@@ -33,7 +33,15 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
                     if ustream_TSSConc[i] < 0.01:
                         Qi = 0
                     else:
-                        Qi = PD[i]/PS*setpts[0]/ustream_TSSConc[i]/0.000062428
+                        Qi = PD[i]/PS*setpts[0]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
+                elif objType == "both":
+                    Qi_flow = PD[i]/PS*setpts[0]*max_flow
+                    if ustream_TSSConc[i] < 0.01:
+                        Qi_TSS = 0
+                    else:
+                        Qi_TSS = PD[i]/PS*setpts[1]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
+                    # Weight desired flow by dparam (epsilon) values
+                    Qi = (dparam[0]*Qi_flow+dparam[1]*Qi_TSS)/(dparam[0]+dparam[1])
 
             action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
         else:

@@ -6,13 +6,13 @@ import numpy as np
 import pickle
 
 # Enter ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
-#ISDs = [11,6,2]
-ISDs = [13,12,11,10,9,8,7,6,4,3,2]
+ISDs = [11,6,2]
+#ISDs = [13,12,11,10,9,8,7,6,4,3,2]
 # Enter number of main trunkline branches
 n_trunkline = 3
 # Enter array with number of ISDs along each main trunkline branch, from most
 # upstream branch to most downstream
-n_ISDs = [3,5,3]
+n_ISDs = [1,1,1]
 # Based on ISDs, pulls states, parameters, and control points
 state_space, control_points, max_depths, uInvert, dInvert, orifice_diam_all, colors, labels = GDRSS_build(ISDs)
 # Input file
@@ -21,8 +21,10 @@ env = Env("../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS.inp")
 ## Weighting parameters
 # Enter upstream flooding weight
 beta = 1.0
-# Enter downstream flow weight
-epsilon = 10.0
+# Enter downstream objective weights based on objective type
+epsilon_flow = 10.0
+epsilon_TSS = 10.0
+#epsilon = 10.0
 
 ## Downstream setpoints
 # Enter either "manual" to use setpts array establish below or "automatic" to
@@ -33,14 +35,18 @@ setptThres = 0
 # Enter branch setpoints if chose "manual" for setptMethod;
 # list in same order as n_ISDs
 setpts = [0.4,0.5,0.3]
-# For objType enter "flow" or "TSS" for downstream setpoint type;
-# for setpt_WRRF enter setpoint to be used if chose "manual" for setptMethod
+# For objType enter "flow", "TSS", or "both" for downstream objective type;
+# "both" considers both objectives simulataneously, weighting based on
+# values for epsilon_flow and epsilon_TSS provided above;
+# for setpt_WRRF enter setpoint to be used if chose "automatic" for setptMethod;
+# if objType == "both", enter both setpt_WRRF_flow and setpt_WRRF_TSS values
 #objType = "flow"; setpt_WRRF = 0.4
-objType = "TSS"; setpt_WRRF = 0.2
+#objType = "TSS"; setpt_WRRF = 0.2
+objType = "both"; setpt_WRRF_flow = 0.4; setpt_WRRF_TSS = 0.2
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
 # Enter 1 to include no control simulation and 0 otherwise
-noControl = 1
+noControl = 0
 # Enter 1 to include control simulation and 0 otherwise
 control = 1
 
@@ -64,7 +70,9 @@ max_flow_WRRF = 536.684
 # Enter the max flow for each branch (recalculated if noControl == 1)
 max_flow_dstream = [287.939,154.492,198.450]
 # Enter the max TSS load for WRRF (recalculated if noControl == 1)
-max_TSSLoad_WRRF = 0.00244
+max_TSSLoad_WRRF = 0.4663
+# Enter the max TSS load for each (recalculated if noControl == 1)
+max_TSSLoad_dstream = [0.1799,0.1506,0.2338]
 # Enter the routing timestep in seconds
 routime_step = 10
 # Enter the discharge coefficient of orifices
@@ -76,6 +84,7 @@ if noControl == 1:
     time = np.empty((0,1), float)
     ustream_depths = np.empty((0,len(state_space["depthsL"])), float)
     dstream_flows = np.empty((0,n_trunkline), float)
+    dstream_TSSLoad = np.empty((0,n_trunkline), float)
     WRRF_flow = np.empty((0,1), float)
     WRRF_TSS = np.empty((0,1), float)
     WRRF_TSSLoad = np.empty((0,1), float)
@@ -86,9 +95,12 @@ if noControl == 1:
             ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(state_space["depthsL"][e])/max_depths[e]))
         ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
         dstream_flows_tmp = []
+        dstream_TSSLoad_tmp = []
         for e in range(1,len(state_space["flows"])):
             dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(state_space["flows"][e])))
+            dstream_TSSLoad_tmp = np.hstack((dstream_TSSLoad_tmp,env.flow(state_space["flows"][e])*env.get_pollutant_link(state_space["flows"][e])*0.000062428))
         dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
+        dstream_TSSLoad = np.vstack((dstream_TSSLoad,dstream_TSSLoad_tmp))
         WRRF_flow = np.vstack((WRRF_flow,env.flow(state_space["flows"][0])))
         WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(state_space["flows"][0])))
         WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
@@ -99,10 +111,11 @@ if noControl == 1:
     max_flow_dstream = np.zeros(n_trunkline)
     for e in range(0,n_trunkline):
         max_flow_dstream[e] = max(dstream_flows[:,e])
+        max_TSSLoad_dstream[e] = max(dstream_TSSLoad[:,e])
     max_TSSLoad_WRRF = max(WRRF_TSSLoad)
-    if normalize == 1:
-        WRRF_flow = WRRF_flow/max_flow_WRRF
-        WRRF_TSSLoad = WRRF_TSSLoad/max_TSSLoad_WRRF
+    #if normalize == 1:
+    #    WRRF_flow = WRRF_flow/max_flow_WRRF
+    #    WRRF_TSSLoad = WRRF_TSSLoad/max_TSSLoad_WRRF
 
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
@@ -114,11 +127,19 @@ if noControl == 1:
                         color = colors[a], linestyle = ':')
 
         plt.subplot(322)
-        plt.plot(time,WRRF_flow, label = "No control, WRRF flow",
+        if normalize == 1:
+            plt.plot(time,WRRF_flow/max_flow_WRRF, label = "No control, WRRF flow",
+                    color = colors[-1], linestyle = ':')
+        else:
+            plt.plot(time,WRRF_flow, label = "No control, WRRF flow",
                     color = colors[-1], linestyle = ':')
 
         plt.subplot(323)
-        plt.plot(time,WRRF_TSSLoad, label = "No control, WRRF TSS Load",
+        if normalize == 1:
+            plt.plot(time,WRRF_TSSLoad/max_TSSLoad_WRRF, label = "No control, WRRF TSS Load",
+                    color = colors[-1], linestyle = ':')
+        else:
+            plt.plot(time,WRRF_TSSLoad, label = "No control, WRRF TSS Load",
                     color = colors[-1], linestyle = ':')
 
         plt.subplot(324)
@@ -164,21 +185,41 @@ if control == 1:
             if objType == "flow":
                 WRRF_flow_tmp = env.flow(state_space["flows"][0])
                 dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
+                dparam = epsilon_flow
+                setpt = np.array([setpt_WRRF])
             elif objType == "TSS":
                 WRRF_flow_tmp = env.flow(state_space["flows"][0])
                 WRRF_TSS_tmp = env.get_pollutant_link(state_space["flows"][0])
                 WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
                 dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
+                dparam = epsilon_TSS
+                setpt = np.array([setpt_WRRF])
+            elif objType == "both":
+                WRRF_flow_tmp = env.flow(state_space["flows"][0])
+                WRRF_TSS_tmp = env.get_pollutant_link(state_space["flows"][0])
+                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                dstream = np.array([WRRF_flow_tmp/max_flow_WRRF, WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
+                dparam = np.array([epsilon_flow, epsilon_TSS])
+                setpt = np.array([setpt_WRRF_flow, setpt_WRRF_TSS])
 
-            setpt = np.array([setpt_WRRF])
             uparam = beta
-            dparam = epsilon
+            #dparam = epsilon
             orifice_diam = np.ones(n_trunkline)
             p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
+            #if (objType == "flow") or (objType == "TSS"):
+            #    p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
+            #elif objType == "both":
+            #    p_b, PD_b, PS_b = mbc_noaction_mult(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
             if PS_b == 0:
                 setpts = np.zeros(n_trunkline)
             else:
-                setpts = PD_b/PS_b*setpt_WRRF*max_flow_WRRF/max_flow_dstream
+                if objType == "flow":
+                    setpts = PD_b/PS_b*setpt_WRRF*max_flow_WRRF/max_flow_dstream
+                elif objType == "TSS":
+                    setpts = PD_b/PS_b*setpt_WRRF*max_TSSLoad_WRRF/max_TSSLoad_dstream
+                elif objType == "both":
+                    setpts_flow = PD_b/PS_b*setpt_WRRF_flow*max_flow_WRRF/max_flow_dstream
+                    setpts_TSS = PD_b/PS_b*setpt_WRRF_TSS*max_TSSLoad_WRRF/max_TSSLoad_dstream
 
         for b in range(0,n_trunkline):
             branch_depths = []
@@ -193,16 +234,23 @@ if control == 1:
             ustream = branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
             if objType == "flow":
                 dn_flow_tmp = env.flow(state_space["flows"][b+1])
-                dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
+                dstream = np.array([dn_flow_tmp/max_flow_dstream[b]])
+                setpt = np.array([setpts[b]])
             elif objType == "TSS":
-                WRRF_flow_tmp = env.flow(state_space["flows"][b+1])
-                WRRF_TSS_tmp = env.get_pollutant_link(state_space["flows"][b+1])
-                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
-                dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
+                dn_flow_tmp = env.flow(state_space["flows"][b+1])
+                dn_TSS_tmp = env.get_pollutant_link(state_space["flows"][b+1])
+                dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
+                dstream = np.array([dn_TSSLoad_tmp/max_TSSLoad_dstream[b]])
+                setpt = np.array([setpts[b]])
+            elif objType == "both":
+                dn_flow_tmp = env.flow(state_space["flows"][b+1])
+                dn_TSS_tmp = env.get_pollutant_link(state_space["flows"][b+1])
+                dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
+                dstream = np.array([dn_flow_tmp/max_flow_dstream[b], dn_TSSLoad_tmp/max_TSSLoad_dstream[b]])
+                setpt = np.array([setpts_flow[b], setpts_TSS[b]])
 
-            setpt = np.array([setpts[b]])
             uparam = beta
-            dparam = epsilon
+            #dparam = epsilon
 
             action_sub_down = np.ones(n_ISDs[b])
             action_sub_up = np.zeros(n_ISDs[b])
@@ -214,7 +262,7 @@ if control == 1:
             elif contType == "continuous":
                 p, PD, PS, action_sub = mbc(ustream, dstream, setpt, uparam,
                                         dparam, n_ISDs[b], action_sub, discharge,
-                                        max_flow_dstream[b], units, orifice_diam,
+                                        max_flow_dstream[b], max_TSSLoad_dstream[b], units, orifice_diam,
                                         shapes, ustream_node_depths, dstream_node_depths,
                                         uInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
                                         dInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
@@ -246,13 +294,15 @@ if control == 1:
             demands = PDs
             supply = PSs
             gates = action
-            setpts_all = setpts
+            if (objType == "flow") or (objType == "TSS"):
+                setpts_all = setpts
         else:
             price = np.vstack((price,ps))
             demands = np.vstack((demands,PDs))
             supply = np.vstack((supply,PSs))
             gates = np.vstack((gates,action))
-            setpts_all = np.vstack((setpts_all,setpts))
+            if (objType == "flow") or (objType == "TSS"):
+                setpts_all = np.vstack((setpts_all,setpts))
 
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
@@ -291,12 +341,15 @@ if control == 1:
         if normalize == 1:
             plt.plot(time,WRRF_TSSLoad/max_TSSLoad_WRRF, label = "MBC, WRRF TSS Load",
                     color = colors[-1], linestyle = '-')
+            if setptMethod == "automatic" and objType == "TSS":
+                plt.plot(time,setpt_WRRF*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
+                        color = 'k')
         else:
             plt.plot(time,WRRF_TSSLoad, label = "No control, WRRF TSS Load",
                     color = colors[-1], linestyle = '-')
-        if setptMethod == "automatic" and objType == "TSS":
-            plt.plot(time,setpt_WRRF*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
-                    color = 'k')
+            if setptMethod == "automatic" and objType == "TSS":
+                plt.plot(time,max_TSSLoad_WRRF*setpt_WRRF*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
+                        color = 'k')
 
         for a in range(0,n_trunkline):
             plt.subplot(324)
