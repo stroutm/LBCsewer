@@ -1,5 +1,5 @@
 from environment_mbc_wq import Env
-from mbc_fn import mbc, mbc_noaction, mbc_bin, perf
+from mbc_fn import mbc, mbc_multi, mbc_noaction, mbc_noaction_multi, mbc_bin, perf
 from GDRSS_fn import GDRSS_build
 import matplotlib.pyplot as plt
 import numpy as np
@@ -46,7 +46,7 @@ objType = "both"; setpt_WRRF_flow = 0.4; setpt_WRRF_TSS = 0.2
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
 # Enter 1 to include no control simulation and 0 otherwise
-noControl = 0
+noControl = 1
 # Enter 1 to include control simulation and 0 otherwise
 control = 1
 
@@ -205,11 +205,11 @@ if control == 1:
             uparam = beta
             #dparam = epsilon
             orifice_diam = np.ones(n_trunkline)
-            p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
-            #if (objType == "flow") or (objType == "TSS"):
-            #    p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
-            #elif objType == "both":
-            #    p_b, PD_b, PS_b = mbc_noaction_mult(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
+            #p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
+            if (objType == "flow") or (objType == "TSS"):
+                p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
+            elif objType == "both":
+                p_b, PD_b, PS_b = mbc_noaction_multi(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
             if PS_b == 0:
                 setpts = np.zeros(n_trunkline)
             else:
@@ -246,8 +246,8 @@ if control == 1:
                 dn_flow_tmp = env.flow(state_space["flows"][b+1])
                 dn_TSS_tmp = env.get_pollutant_link(state_space["flows"][b+1])
                 dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
-                dstream = np.array([dn_flow_tmp/max_flow_dstream[b], dn_TSSLoad_tmp/max_TSSLoad_dstream[b]])
-                setpt = np.array([setpts_flow[b], setpts_TSS[b]])
+                dstream = np.array([[dn_flow_tmp/max_flow_dstream[b]], [dn_TSSLoad_tmp/max_TSSLoad_dstream[b]]])
+                setpt = np.array([[setpts_flow[b]], [setpts_TSS[b]]])
 
             uparam = beta
             #dparam = epsilon
@@ -260,7 +260,16 @@ if control == 1:
                 p, PD, PS, action_sub = mbc_bin(ustream, dstream, setpt, uparam,
                                             dparam, n_ISDs[b], action_sub, discharge, setptThres)
             elif contType == "continuous":
-                p, PD, PS, action_sub = mbc(ustream, dstream, setpt, uparam,
+                if (objType == "flow") or (objType == "TSS"):
+                    p, PD, PS, action_sub = mbc(ustream, dstream, setpt, uparam,
+                                        dparam, n_ISDs[b], action_sub, discharge,
+                                        max_flow_dstream[b], max_TSSLoad_dstream[b], units, orifice_diam,
+                                        shapes, ustream_node_depths, dstream_node_depths,
+                                        uInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
+                                        dInvert[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
+                                        setptThres, objType, ustream_node_TSSConc)
+                elif objType == "both":
+                    p, PD, PS, action_sub = mbc_multi(ustream, dstream, setpt, uparam,
                                         dparam, n_ISDs[b], action_sub, discharge,
                                         max_flow_dstream[b], max_TSSLoad_dstream[b], units, orifice_diam,
                                         shapes, ustream_node_depths, dstream_node_depths,
@@ -330,11 +339,17 @@ if control == 1:
             if setptMethod == "automatic" and objType == "flow":
                 plt.plot(time,setpt_WRRF*np.ones(len(WRRF_flow)),
                     color = 'k', label = 'Setpoint')
+            elif setptMethod == "automatic" and objType == "flow":
+                plt.plot(time,setpt_WRRF_flow*np.ones(len(WRRF_flow)),
+                    color = 'k', label = 'Setpoint')
         else:
             plt.plot(time,WRRF_flow, label = "MBC, WRRF flow",
                     color = colors[-1], linestyle = '-')
             if setptMethod == "automatic" and objType == "flow":
                 plt.plot(time,max_flow_WRRF*setpt_WRRF*np.ones(len(WRRF_flow)),
+                    color = 'k', label = 'Setpoint')
+            elif setptMethod == "automatic" and objType == "both":
+                plt.plot(time,max_flow_WRRF*setpt_WRRF_flow*np.ones(len(WRRF_flow)),
                     color = 'k', label = 'Setpoint')
 
         plt.subplot(323)
@@ -344,11 +359,17 @@ if control == 1:
             if setptMethod == "automatic" and objType == "TSS":
                 plt.plot(time,setpt_WRRF*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                         color = 'k')
+            elif setptMethod == "automatic" and objType == "both":
+                plt.plot(time,setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
+                        color = 'k')
         else:
             plt.plot(time,WRRF_TSSLoad, label = "No control, WRRF TSS Load",
                     color = colors[-1], linestyle = '-')
             if setptMethod == "automatic" and objType == "TSS":
                 plt.plot(time,max_TSSLoad_WRRF*setpt_WRRF*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
+                        color = 'k')
+            elif setptMethod == "automatic" and objType == "both":
+                plt.plot(time,max_TSSLoad_WRRF*setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                         color = 'k')
 
         for a in range(0,n_trunkline):
