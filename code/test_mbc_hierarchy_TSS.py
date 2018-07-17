@@ -41,8 +41,8 @@ setpts = [0.4,0.5,0.3]
 # for setpt_WRRF enter setpoint to be used if chose "automatic" for setptMethod;
 # if objType == "both", enter both setpt_WRRF_flow and setpt_WRRF_TSS values
 #objType = "flow"; setpt_WRRF = 0.4
-objType = "TSS"; setpt_WRRF = 0.2
-#objType = "both"; setpt_WRRF_flow = 0.4; setpt_WRRF_TSS = 0.2
+#objType = "TSS"; setpt_WRRF = 0.2
+objType = "both"; setpt_WRRF_flow = 0.4; setpt_WRRF_TSS = 0.2
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
 # Enter 1 to include no control simulation and 0 otherwise
@@ -54,7 +54,7 @@ control = 1
 # Enter 1 to save results and 0 otherwise
 save = 1
 # Enter filename to save under if save == 1
-saveNames = ['TSS_HIC2018']
+saveNames = ['both_HIC2018']
 # Enter 1 to plot results and 0 otherwise
 plot = 1
 # Enter 1 to normalize downstream flows in plots and 0 otherwise
@@ -399,8 +399,12 @@ if control == 1:
     print("Done with MBC")
     if save == 1:
         fileName = '../data/results/control/' + saveNames[0] + '.pkl'
-        with open(fileName,'w') as f:
-            pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
+        if objType == "both":
+            with open(fileName,'w') as f:
+                pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF_flow,setpt_WRRF_TSS,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
+        else:
+            with open(fileName,'w') as f:
+                pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
         print('Control results saved')
 
 if plot == 1:
