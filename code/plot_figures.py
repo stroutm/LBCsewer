@@ -2,14 +2,14 @@ import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 
-fileNames = ['TSS_HIC2018.pkl']
+fileNames = ['both_2018paper.pkl']
 
 n_trunkline = 3
 n_ISDs = [3,5,3]
 setptMethod = "automatic"
-objType = "TSS"
+objType = "both"
 # 2: upstream depths; 3: WRRF flow; 4: WRRF TSS load; 5: downstream flows; 6: demands/price; 7: gates
-plot = 7
+plot = 2
 normalize = 0
 colors = ['#276278','#167070','#55a6a6','#b5491a','#fe6625','#fe9262','#fb9334','#ffb16c','#414a4f','#006592','#003d59','#167070','#fe6625','#003d59','#66747c']
 labels = ['K','J','I','H','G','F','E','D','C','B','A','I-K','D-H','A-C']
@@ -63,7 +63,7 @@ if no_control == 1:
 # Control
 if objType == "both":
     with open('../data/results/control/'+fileNames[0]) as f:
-        time, ustream_depths, WRRF_flow, setpt_WRRF_flow, setpt_WRRF_TSS, max_flow_WRRF, max_TSSLoad_WRRF, WRRF_TSSLoad, dstream_flows, setpts_all, max_flow_dstream, demands, price, gates = pickle.load(f)
+        time, ustream_depths, WRRF_flow, setpt_WRRF_flow, setpt_WRRF_TSS, max_flow_WRRF, max_TSSLoad_WRRF, WRRF_TSSLoad, dstream_flows, max_flow_dstream, demands, price, gates = pickle.load(f)
 else:
     with open('../data/results/control/'+fileNames[0]) as f:
         time, ustream_depths, WRRF_flow, setpt_WRRF, max_flow_WRRF, max_TSSLoad_WRRF, WRRF_TSSLoad, dstream_flows, setpts_all, max_flow_dstream, demands, price, gates = pickle.load(f)
