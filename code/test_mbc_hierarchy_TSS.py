@@ -54,7 +54,7 @@ control = 1
 # Enter 1 to save results and 0 otherwise
 save = 1
 # Enter filename to save under if save == 1
-saveNames = ['both_HIC2018']
+saveNames = ['both_2018paper']
 # Enter 1 to plot results and 0 otherwise
 plot = 1
 # Enter 1 to normalize downstream flows in plots and 0 otherwise
@@ -401,7 +401,7 @@ if control == 1:
         fileName = '../data/results/control/' + saveNames[0] + '.pkl'
         if objType == "both":
             with open(fileName,'w') as f:
-                pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF_flow,setpt_WRRF_TSS,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
+                pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF_flow,setpt_WRRF_TSS,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,max_flow_dstream,demands,price,gates],f)
         else:
             with open(fileName,'w') as f:
                 pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
