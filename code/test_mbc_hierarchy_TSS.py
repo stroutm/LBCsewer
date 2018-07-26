@@ -19,6 +19,8 @@ state_space, control_points, max_depths, uInvert, dInvert, orifice_diam_all, col
 # Input file
 #env = Env("../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS.inp")
 env = Env("../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows_dryweather.inp")
+# Enter 1 if .inp file has wet weather; 0 otherwise
+wetWeather = 0
 
 ## Weighting parameters
 # Enter upstream flooding weight
@@ -41,9 +43,9 @@ setpts = [0.4,0.5,0.3]
 # values for epsilon_flow and epsilon_TSS provided above;
 # for setpt_WRRF enter setpoint to be used if chose "automatic" for setptMethod;
 # if objType == "both", enter both setpt_WRRF_flow and setpt_WRRF_TSS values
-objType = "flow"; setpt_WRRF = 0.8
+#objType = "flow"; setpt_WRRF = 2.0
 #objType = "TSS"; setpt_WRRF = 2.0
-#objType = "both"; setpt_WRRF_flow = 2.0; setpt_WRRF_TSS = 2.0
+objType = "both"; setpt_WRRF_flow = 0.8; setpt_WRRF_TSS = 0.8
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
 # Enter 1 to include no control simulation and 0 otherwise
@@ -65,15 +67,26 @@ normalize = 0
 units = "english"
 # Enter "rectangular" for rectangular orifices; otherwise is not developed yet
 shapes = "rectangular"
-# Enter the max flow for normalization of the WRRF flow;
-# if noControl == 1, this will be recalculated using no control flow peak
-max_flow_WRRF = 223.275
-# Enter the max flow for each branch (recalculated if noControl == 1)
-max_flow_dstream = [93.7,49.75,75.22]
-# Enter the max TSS load for WRRF (recalculated if noControl == 1)
-max_TSSLoad_WRRF = 2.3675
-# Enter the max TSS load for each (recalculated if noControl == 1)
-max_TSSLoad_dstream = [0.8421,0.5240,1.0090]
+if wetWeather == 1:
+    # Enter the max flow for normalization of the WRRF flow;
+    # if noControl == 1, this will be recalculated using no control flow peak
+    max_flow_WRRF = 712.509
+    # Enter the max flow for each branch (recalculated if noControl == 1)
+    max_flow_dstream = [349.693,190.156,279.428]
+    # Enter the max TSS load for WRRF (recalculated if noControl == 1)
+    max_TSSLoad_WRRF = 3.533
+    # Enter the max TSS load for each (recalculated if noControl == 1)
+    max_TSSLoad_dstream = [1.573,0.8788,1.762]
+else:
+    # Enter the max flow for normalization of the WRRF flow;
+    # if noControl == 1, this will be recalculated using no control flow peak
+    max_flow_WRRF = 223.275
+    # Enter the max flow for each branch (recalculated if noControl == 1)
+    max_flow_dstream = [93.7,49.75,75.22]
+    # Enter the max TSS load for WRRF (recalculated if noControl == 1)
+    max_TSSLoad_WRRF = 2.3675
+    # Enter the max TSS load for each (recalculated if noControl == 1)
+    max_TSSLoad_dstream = [0.8421,0.5240,1.0090]
 # Enter the routing timestep in seconds
 routime_step = 10
 # Enter number of steps between control actions
