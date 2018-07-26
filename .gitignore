@@ -2,3 +2,4 @@ data/
 metadata/
 fig/exploratory
 .log
+.pyc
