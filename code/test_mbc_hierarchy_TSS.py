@@ -5,22 +5,45 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import copy
+import swmmAPI as swmm
+
+# Generate SWMM attributes dictionaries
+headers = ['[TITLE]','[OPTIONS]','[EVAPORATION]','[RAINGAGES]','[SUBCATCHMENTS]',
+    '[SUBAREAS]','[INFILTRATION]','[JUNCTIONS]','[OUTFALLS]','[STORAGE]',
+    '[CONDUITS]','[PUMPS]','[ORIFICES]','[WEIRS]','[XSECTIONS]','[LOSSES]',
+    '[CONTROLS]','[INFLOWS]','[DWF]','[HYDROGRAPHS]','[RDII]','[CURVES]',
+    '[TIMESERIES]','[PATTERNS]','[REPORT]','[TAGS]','[MAP]','[COORDINATES]',
+    '[VERTICES]','[Polygons]','[SYMBOLS]','[PROFILES]']
+inpF = "../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows.inp"
+sections = swmm.make_sections(inpF,headers)
+junctionDict = swmm.make_junction_dictionary(sections)
+conduitDict = swmm.make_conduit_dictionary(sections)
+orificeDict = swmm.make_orifice_dictionary(sections)
 
 # Enter ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
-ISDs = [11,6,2]
-#ISDs = [13,12,11,10,9,8,7,6,4,3,2]
+#ISDs = [11,6,2]
+ISDs = [13,12,11,10,9,8,7,6,4,3,2]
 # Enter number of main trunkline branches
 n_trunkline = 3
 # Enter array with number of ISDs along each main trunkline branch, from most
 # upstream branch to most downstream
-n_ISDs = [1,1,1]
+n_ISDs = [3,5,3]
 # Based on ISDs, pulls states, parameters, and control points
-state_space, control_points, max_depths, uInvert, dInvert, orifice_diam_all, colors, labels = GDRSS_build(ISDs)
+control_points, colors, labels, ustreamConduits, branchConduits, WRRFConduit = GDRSS_build(ISDs)
+uInvert = []
+dInvert = []
+orifice_diam_all = []
+max_depths = []
+for i in range(0,sum(n_ISDs)):
+    uInvert = np.hstack((uInvert,junctionDict[orificeDict[control_points[i]]['from_node']]['elevation']))
+    dInvert = np.hstack((dInvert,junctionDict[orificeDict[control_points[i]]['to_node']]['elevation']))
+    orifice_diam_all = np.hstack((orifice_diam_all,orificeDict[control_points[i]]['geom1']))
+    max_depths = np.hstack((max_depths,conduitDict[ustreamConduits[i]]['geom1']))
+
 # Input file
-#env = Env("../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS.inp")
-env = Env("../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows_dryweather.inp")
+env = Env(inpF)
 # Enter 1 if .inp file has wet weather; 0 otherwise
-wetWeather = 0
+wetWeather = 1
 
 ## Weighting parameters
 # Enter upstream flooding weight
@@ -43,8 +66,8 @@ setpts = [0.4,0.5,0.3]
 # values for epsilon_flow and epsilon_TSS provided above;
 # for setpt_WRRF enter setpoint to be used if chose "automatic" for setptMethod;
 # if objType == "both", enter both setpt_WRRF_flow and setpt_WRRF_TSS values
-#objType = "flow"; setpt_WRRF = 2.0
-#objType = "TSS"; setpt_WRRF = 2.0
+#objType = "flow"; setpt_WRRF = 0.8
+#objType = "TSS"; setpt_WRRF = 0.8
 objType = "both"; setpt_WRRF_flow = 0.8; setpt_WRRF_TSS = 0.8
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
@@ -91,7 +114,7 @@ else:
 routime_step = 10
 # Enter number of steps between control actions
 # (x min) * (60s/min) * (timestep/10s)
-#control_step = 8640
+#control_step = 8640 # one action per day (only for visualization)
 control_step = int(np.ceil(15.*60./routime_step))
 # Enter the discharge coefficient of orifices
 discharge = 0.61
@@ -100,7 +123,7 @@ discharge = 0.61
 if noControl == 1:
     done = False; j = 0
     time = np.empty((0,1), float)
-    ustream_depths = np.empty((0,len(state_space["depthsL"])), float)
+    ustream_depths = np.empty((0,len(ustreamConduits)),float)
     dstream_flows = np.empty((0,n_trunkline), float)
     dstream_TSSLoad = np.empty((0,n_trunkline), float)
     WRRF_flow = np.empty((0,1), float)
@@ -109,18 +132,18 @@ if noControl == 1:
     while not done:
         time = np.vstack((time,j/8640.))
         ustream_depths_tmp = []
-        for e in range(0,len(state_space["depthsL"])):
-            ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(state_space["depthsL"][e])/max_depths[e]))
+        for e in range(0,len(ustreamConduits)):
+            ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(ustreamConduits[e])/max_depths[e]))
         ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
         dstream_flows_tmp = []
         dstream_TSSLoad_tmp = []
-        for e in range(1,len(state_space["flows"])):
-            dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(state_space["flows"][e])))
-            dstream_TSSLoad_tmp = np.hstack((dstream_TSSLoad_tmp,env.flow(state_space["flows"][e])*env.get_pollutant_link(state_space["flows"][e])*0.000062428))
+        for e in range(0,len(branchConduits)):
+            dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(branchConduits[e])))
+            dstream_TSSLoad_tmp = np.hstack((dstream_TSSLoad_tmp,env.flow(branchConduits[e])*env.get_pollutant_link(branchConduits[e])*0.000062428))
         dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
         dstream_TSSLoad = np.vstack((dstream_TSSLoad,dstream_TSSLoad_tmp))
-        WRRF_flow = np.vstack((WRRF_flow,env.flow(state_space["flows"][0])))
-        WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(state_space["flows"][0])))
+        WRRF_flow = np.vstack((WRRF_flow,env.flow(WRRFConduit)))
+        WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(WRRFConduit)))
         WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
         j += 1
         done = env.step()
@@ -176,7 +199,7 @@ if control == 1:
     done = False; j = 0
     time_state = np.empty((0,1), float)
     time_control = np.empty((0,1), float)
-    ustream_depths = np.empty((0,len(state_space["depthsL"])), float)
+    ustream_depths = np.empty((0,len(ustreamConduits)),float)
     dstream_flows = np.empty((0,n_trunkline), float)
     WRRF_flow = np.empty((0,1), float)
     WRRF_TSS = np.empty((0,1), float)
@@ -207,15 +230,15 @@ if control == 1:
                 gates = np.vstack((gates,gates_tmp))
 
             ustream_depths_tmp = []
-            for e in range(0,len(state_space["depthsL"])):
-                ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(state_space["depthsL"][e])/max_depths[e]))
+            for e in range(0,len(ustreamConduits)):
+                ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(ustreamConduits[e])/max_depths[e]))
             ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
             dstream_flows_tmp = []
-            for e in range(1,len(state_space["flows"])):
-                dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(state_space["flows"][e])))
+            for e in range(0,len(branchConduits)):
+                dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(branchConduits[e])))
             dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
-            WRRF_flow = np.vstack((WRRF_flow,env.flow(state_space["flows"][0])))
-            WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(state_space["flows"][0])))
+            WRRF_flow = np.vstack((WRRF_flow,env.flow(WRRFConduit)))
+            WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(WRRFConduit)))
             WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
 
             for b in range(0,n_trunkline):
@@ -238,23 +261,23 @@ if control == 1:
                 for b in range(0,n_trunkline):
                     branch_depths = []
                     for e in range(0,n_ISDs[b]):
-                        branch_depths = np.hstack((branch_depths,env.depthL(state_space["depthsL"][sum(n_ISDs[0:b])+e])))
+                        branch_depths = np.hstack((branch_depths,env.depthL(ustreamConduits[sum(n_ISDs[0:b])+e])))
                     ustream[b] = max(branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
                 if objType == "flow":
-                    WRRF_flow_tmp = env.flow(state_space["flows"][0])
+                    WRRF_flow_tmp = env.flow(WRRFConduit)
                     dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
                     dparam = epsilon_flow
                     setpt = np.array([setpt_WRRF])
                 elif objType == "TSS":
-                    WRRF_flow_tmp = env.flow(state_space["flows"][0])
-                    WRRF_TSS_tmp = env.get_pollutant_link(state_space["flows"][0])
+                    WRRF_flow_tmp = env.flow(WRRFConduit)
+                    WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
                     WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
                     dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
                     dparam = epsilon_TSS
                     setpt = np.array([setpt_WRRF])
                 elif objType == "both":
-                    WRRF_flow_tmp = env.flow(state_space["flows"][0])
-                    WRRF_TSS_tmp = env.get_pollutant_link(state_space["flows"][0])
+                    WRRF_flow_tmp = env.flow(WRRFConduit)
+                    WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
                     WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
                     dstream = np.array([WRRF_flow_tmp/max_flow_WRRF, WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
                     dparam = np.array([epsilon_flow, epsilon_TSS])
@@ -284,24 +307,24 @@ if control == 1:
                 dstream_node_depths = []
                 ustream_node_TSSConc = []
                 for e in range(0,n_ISDs[b]):
-                    branch_depths = np.hstack((branch_depths,env.depthL(state_space["depthsL"][sum(n_ISDs[0:b])+e])))
-                    ustream_node_depths = np.hstack((ustream_node_depths,env.depthN(state_space["depthsN"][sum(n_ISDs[0:b])+e])))
-                    dstream_node_depths = np.hstack((dstream_node_depths,env.depthN(state_space["depthsN"][sum(n_ISDs)+sum(n_ISDs[0:b])+e])))
-                    ustream_node_TSSConc = np.hstack((ustream_node_TSSConc,env.get_pollutant_node(state_space["depthsN"][e])))
+                    branch_depths = np.hstack((branch_depths,env.depthL(ustreamConduits[sum(n_ISDs[0:b])+e])))
+                    ustream_node_depths = np.hstack((ustream_node_depths,env.depthN(orificeDict[control_points[sum(n_ISDs[0:b])+e]]['from_node'])))
+                    dstream_node_depths = np.hstack((dstream_node_depths,env.depthN(orificeDict[control_points[sum(n_ISDs)+sum(n_ISDs[0:b])+e]]['to_node'])))
+                    ustream_node_TSSConc = np.hstack((ustream_node_TSSConc,env.get_pollutant_node(orificeDict[control_points[sum(n_ISDs[0:b])+e]]['from_node'])))
                 ustream = branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
                 if objType == "flow":
-                    dn_flow_tmp = env.flow(state_space["flows"][b+1])
+                    dn_flow_tmp = env.flow(branchConduits[b])
                     dstream = np.array([dn_flow_tmp/max_flow_dstream[b]])
                     setpt = np.array([setpts[b]])
                 elif objType == "TSS":
-                    dn_flow_tmp = env.flow(state_space["flows"][b+1])
-                    dn_TSS_tmp = env.get_pollutant_link(state_space["flows"][b+1])
+                    dn_flow_tmp = env.flow(branchConduits[b])
+                    dn_TSS_tmp = env.get_pollutant_link(branchConduits[b])
                     dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
                     dstream = np.array([dn_TSSLoad_tmp/max_TSSLoad_dstream[b]])
                     setpt = np.array([setpts[b]])
                 elif objType == "both":
-                    dn_flow_tmp = env.flow(state_space["flows"][b+1])
-                    dn_TSS_tmp = env.get_pollutant_link(state_space["flows"][b+1])
+                    dn_flow_tmp = env.flow(branchConduits[b])
+                    dn_TSS_tmp = env.get_pollutant_link(branchConduits[b])
                     dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
                     dstream = np.array([[dn_flow_tmp/max_flow_dstream[b]], [dn_TSSLoad_tmp/max_TSSLoad_dstream[b]]])
                     setpt = np.array([[setpts_flow[b]], [setpts_TSS[b]]])
@@ -352,15 +375,15 @@ if control == 1:
                     gateTrans[m,:] = np.linspace(actPrev[m],actCurr[m],control_step+1)
 
             ustream_depths_tmp = []
-            for e in range(0,len(state_space["depthsL"])):
-                ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(state_space["depthsL"][e])/max_depths[e]))
+            for e in range(0,len(ustreamConduits)):
+                ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(ustreamConduits[e])/max_depths[e]))
             ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
             dstream_flows_tmp = []
-            for e in range(1,len(state_space["flows"])):
-                dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(state_space["flows"][e])))
+            for e in range(0,len(branchConduits)):
+                dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(branchConduits[e])))
             dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
-            WRRF_flow = np.vstack((WRRF_flow,env.flow(state_space["flows"][0])))
-            WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(state_space["flows"][0])))
+            WRRF_flow = np.vstack((WRRF_flow,env.flow(WRRFConduit)))
+            WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(WRRFConduit)))
             WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
 
             if j == 1:
@@ -461,7 +484,11 @@ if control == 1:
                         label = "price, " + labels[a-n_trunkline],
                         color = colors[a-n_trunkline-1], linestyle = '--')
 
-    print("Done with MBC")
+    if objType == "flow" or objType == "TSS":
+        print("Done with MBC, Objective: " + objType + ", Setpoint: " + str(setpt_WRRF))
+    elif objType == "both":
+        print("Done with MBC, Objective: " + objType + ", Flow setpoint: " + str(setpt_WRRF_flow) + ", TSS setpoint: " + str(setpt_WRRF_TSS))
+
     if save == 1:
         fileName = '../data/results/control/' + saveNames[0] + '.pkl'
         if objType == "both":
