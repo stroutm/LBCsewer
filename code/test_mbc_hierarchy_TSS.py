@@ -22,13 +22,13 @@ conduitDict = swmm.make_conduit_dictionary(sections)
 orificeDict = swmm.make_orifice_dictionary(sections)
 
 # Enter ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
-#ISDs = [11,6,2]
-ISDs = [13,12,11,10,9,8,7,6,4,3,2]
+ISDs = [11,6,2]
+#ISDs = [13,12,11,10,9,8,7,6,4,3,2]
 # Enter number of main trunkline branches
 n_trunkline = 3
 # Enter array with number of ISDs along each main trunkline branch, from most
 # upstream branch to most downstream
-n_ISDs = [3,5,3]
+n_ISDs = [1,1,1]
 # Based on ISDs, pulls states, parameters, and control points
 control_points, colors, labels, ustreamConduits, branchConduits, WRRFConduit = GDRSS_build(ISDs)
 uInvert = []
@@ -51,7 +51,7 @@ wetWeather = 1
 beta = 1.0
 # Enter downstream objective weights based on objective type
 epsilon_flow = 10.0
-epsilon_TSS = 10.0
+epsilon_TSS = 1.0
 
 ## Downstream setpoints
 # Enter either "manual" to use setpts array establish below or "automatic" to
@@ -67,9 +67,8 @@ setpts = [0.4,0.5,0.3]
 # values for epsilon_flow and epsilon_TSS provided above;
 # for setpt_WRRF enter setpoint to be used if chose "automatic" for setptMethod;
 # if objType == "both", enter both setpt_WRRF_flow and setpt_WRRF_TSS values
-#objType = "flow"; setpt_WRRF = 0.8
-#objType = "TSS"; setpt_WRRF = 0.8
-objType = "both"; setpt_WRRF_flow = 0.8; setpt_WRRF_TSS = 0.8; setpt_WRRF = 0.0
+objType = "both"
+setpt_WRRF_flow = 0.8; setpt_WRRF_TSS = 0.8
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
 # Enter 1 to include no control simulation and 0 otherwise
@@ -164,7 +163,7 @@ if noControl == 1:
         print('No control results saved')
 
 if control == 1:
-    time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, setpt_WRRF, setpt_WRRF_flow, setpt_WRRF_TSS = simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptMethod, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF)
+    time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, setpt_WRRF_flow, setpt_WRRF_TSS = simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptMethod, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF)
 
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
@@ -190,7 +189,7 @@ if control == 1:
             plt.plot(time_state,WRRF_flow/max_flow_WRRF, label = "MBC, WRRF flow",
                     color = colors[-1], linestyle = '-')
             if setptMethod == "automatic" and objType == "flow":
-                plt.plot(time_state,setpt_WRRF*np.ones(len(WRRF_flow)),
+                plt.plot(time_state,setpt_WRRF_flow*np.ones(len(WRRF_flow)),
                     color = 'k', label = 'Setpoint')
             elif setptMethod == "automatic" and objType == "both":
                 plt.plot(time_state,setpt_WRRF_flow*np.ones(len(WRRF_flow)),
@@ -199,7 +198,7 @@ if control == 1:
             plt.plot(time_state,WRRF_flow, label = "MBC, WRRF flow",
                     color = colors[-1], linestyle = '-')
             if setptMethod == "automatic" and objType == "flow":
-                plt.plot(time_state,max_flow_WRRF*setpt_WRRF*np.ones(len(WRRF_flow)),
+                plt.plot(time_state,max_flow_WRRF*setpt_WRRF_flow*np.ones(len(WRRF_flow)),
                     color = 'k', label = 'Setpoint')
             elif setptMethod == "automatic" and objType == "both":
                 plt.plot(time_state,max_flow_WRRF*setpt_WRRF_flow*np.ones(len(WRRF_flow)),
@@ -210,7 +209,7 @@ if control == 1:
             plt.plot(time_state,WRRF_TSSLoad/max_TSSLoad_WRRF, label = "MBC, WRRF TSS Load",
                     color = colors[-1], linestyle = '-')
             if setptMethod == "automatic" and objType == "TSS":
-                plt.plot(time_state,setpt_WRRF*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
+                plt.plot(time_state,setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                         color = 'k')
             elif setptMethod == "automatic" and objType == "both":
                 plt.plot(time_state,setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
@@ -219,7 +218,7 @@ if control == 1:
             plt.plot(time_state,WRRF_TSSLoad, label = "No control, WRRF TSS Load",
                     color = colors[-1], linestyle = '-')
             if setptMethod == "automatic" and objType == "TSS":
-                plt.plot(time_state,max_TSSLoad_WRRF*setpt_WRRF*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
+                plt.plot(time_state,max_TSSLoad_WRRF*setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                         color = 'k')
             elif setptMethod == "automatic" and objType == "both":
                 plt.plot(time_state,max_TSSLoad_WRRF*setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
@@ -249,8 +248,10 @@ if control == 1:
                         label = "price, " + labels[a-n_trunkline],
                         color = colors[a-n_trunkline-1], linestyle = '--')
 
-    if objType == "flow" or objType == "TSS":
-        print("Done with MBC, Objective: " + objType + ", Setpoint: " + str(setpt_WRRF))
+    if objType == "flow":
+        print("Done with MBC, Objective: " + objType + ", Setpoint: " + str(setpt_WRRF_flow))
+    elif objType == "TSS":
+        print("Done with MBC, Objective: " + objType + ", Setpoint: " + str(setpt_WRRF_TSS))
     elif objType == "both":
         print("Done with MBC, Objective: " + objType + ", Flow setpoint: " + str(setpt_WRRF_flow) + ", TSS setpoint: " + str(setpt_WRRF_TSS))
 
@@ -261,7 +262,7 @@ if control == 1:
                 pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF_flow,setpt_WRRF_TSS,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,max_flow_dstream,demands,price,gates],f)
         else:
             with open(fileName,'w') as f:
-                pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
+                pickle.dump([time,ustream_depths,WRRF_flow,setpt_WRRF_flow,setpt_WRRF_TSS,max_flow_WRRF,max_TSSLoad_WRRF,WRRF_TSSLoad,dstream_flows,setpts_all,max_flow_dstream,demands,price,gates],f)
         print('Control results saved')
 
 if plot == 1:

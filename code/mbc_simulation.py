@@ -40,7 +40,7 @@ def simulation_noControl(env, n_trunkline, max_depths, ustreamConduits, branchCo
 
     return time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF
 
-def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptMethod, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF):
+def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptMethod, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF):
     env.reset()
     done = False; j = 0
     time_state = np.empty((0,1), float)
@@ -113,14 +113,14 @@ def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, s
                     WRRF_flow_tmp = env.flow(WRRFConduit)
                     dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
                     dparam = epsilon_flow
-                    setpt = np.array([setpt_WRRF])
+                    setpt = np.array([setpt_WRRF_flow])
                 elif objType == "TSS":
                     WRRF_flow_tmp = env.flow(WRRFConduit)
                     WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
                     WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
                     dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
                     dparam = epsilon_TSS
-                    setpt = np.array([setpt_WRRF])
+                    setpt = np.array([setpt_WRRF_TSS])
                 elif objType == "both":
                     WRRF_flow_tmp = env.flow(WRRFConduit)
                     WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
@@ -140,9 +140,9 @@ def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, s
                     setpts = np.zeros(n_trunkline)
                 else:
                     if objType == "flow":
-                        setpts = PD_b/PS_b*setpt_WRRF*max_flow_WRRF/max_flow_dstream
+                        setpts = PD_b/PS_b*setpt_WRRF_flow*max_flow_WRRF/max_flow_dstream
                     elif objType == "TSS":
-                        setpts = PD_b/PS_b*setpt_WRRF*max_TSSLoad_WRRF/max_TSSLoad_dstream
+                        setpts = PD_b/PS_b*setpt_WRRF_TSS*max_TSSLoad_WRRF/max_TSSLoad_dstream
                     elif objType == "both":
                         setpts_flow = PD_b/PS_b*setpt_WRRF_flow*max_flow_WRRF/max_flow_dstream
                         setpts_TSS = PD_b/PS_b*setpt_WRRF_TSS*max_TSSLoad_WRRF/max_TSSLoad_dstream
@@ -240,7 +240,7 @@ def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, s
                 if (objType == "flow") or (objType == "TSS"):
                     setpts_all = setpts
                 else:
-                    setpts_all = 0
+                    setpts_all = [setpts_flow,setpts_TSS]
             else:
                 price = np.vstack((price,ps))
                 demands = np.vstack((demands,PDs))
@@ -248,5 +248,7 @@ def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, s
                 gates = np.vstack((gates,action))
                 if (objType == "flow") or (objType == "TSS"):
                     setpts_all = np.vstack((setpts_all,setpts))
+                else:
+                    setpts_all = np.vstack((setpts_all,[setpts_flow,setpts_TSS]))
 
-    return time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, setpt_WRRF, setpt_WRRF_flow, setpt_WRRF_TSS
+    return time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, setpt_WRRF_flow, setpt_WRRF_TSS
