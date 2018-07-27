@@ -1,27 +1,29 @@
 from environment_mbc_wq import Env
-from mbc_fn import mbc, mbc_multi, mbc_noaction, mbc_noaction_multi, mbc_bin, perf
 from mbc_simulation import simulation_noControl, simulation_control
 from plot_fn import plot_noControl, plot_control, plot_finish
 from GDRSS_fn import GDRSS_build
-import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-import copy
 import swmmAPI as swmm
 
-# Generate SWMM attributes dictionaries
+## Generate SWMM attributes dictionaries
+# List used to find all SWMM attribute types
 headers = ['[TITLE]','[OPTIONS]','[EVAPORATION]','[RAINGAGES]','[SUBCATCHMENTS]',
     '[SUBAREAS]','[INFILTRATION]','[JUNCTIONS]','[OUTFALLS]','[STORAGE]',
     '[CONDUITS]','[PUMPS]','[ORIFICES]','[WEIRS]','[XSECTIONS]','[LOSSES]',
     '[CONTROLS]','[INFLOWS]','[DWF]','[HYDROGRAPHS]','[RDII]','[CURVES]',
     '[TIMESERIES]','[PATTERNS]','[REPORT]','[TAGS]','[MAP]','[COORDINATES]',
     '[VERTICES]','[Polygons]','[SYMBOLS]','[PROFILES]']
+# Enter .inp file name and location
 inpF = "../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows.inp"
+# Sections and dictionaries generated for SWMM attributes;
+# used for pulling parameters and states
 sections = swmm.make_sections(inpF,headers)
 junctionDict = swmm.make_junction_dictionary(sections)
 conduitDict = swmm.make_conduit_dictionary(sections)
 orificeDict = swmm.make_orifice_dictionary(sections)
 
+## Simulation parameters
 # Enter ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
 #ISDs = [11,6,2]
 ISDs = [13,12,11,10,9,8,7,6,4,3,2]
@@ -32,9 +34,15 @@ n_trunkline = 3
 n_ISDs = [3,5,3]
 # Based on ISDs, pulls states, parameters, and control points
 control_points, colors, labels, ustreamConduits, branchConduits, WRRFConduit = GDRSS_build(ISDs)
+# Compiles useful .inp file parameters, including:
+# invert elevation of node upstream of ISDs (for calculating gate openings)
 uInvert = []
+# invert elevation of node downstream of ISDs (for calculating gate openings)
 dInvert = []
+# ISD orifice diameters (for calculating gate openings)
 orifice_diam_all = []
+# conduit diameters/heights for conduits upstream of ISDs (for normalizing
+# water depths)
 max_depths = []
 for i in range(0,sum(n_ISDs)):
     uInvert = np.hstack((uInvert,junctionDict[orificeDict[control_points[i]]['from_node']]['elevation']))
@@ -42,22 +50,43 @@ for i in range(0,sum(n_ISDs)):
     orifice_diam_all = np.hstack((orifice_diam_all,orificeDict[control_points[i]]['geom1']))
     max_depths = np.hstack((max_depths,conduitDict[ustreamConduits[i]]['geom1']))
 
-# Input file
+# Creates environment for running simulation and getting/setting parameters
+# and states
 env = Env(inpF)
 # Enter 1 if .inp file has wet weather; 0 otherwise;
-# only influences max values below if noControl == 0
+# only influences max values set below if noControl == 0 for testing storm
 wetWeather = 1
+if wetWeather == 1:
+    # Enter the max flow for normalization of the WRRF flow;
+    # if noControl == 1, this will be recalculated using no control flow peak
+    max_flow_WRRF = 712.509
+    # Enter the max flow for each branch (recalculated if noControl == 1)
+    max_flow_dstream = [349.693,190.156,279.428]
+    # Enter the max TSS load for WRRF (recalculated if noControl == 1)
+    max_TSSLoad_WRRF = 3.533
+    # Enter the max TSS load for each (recalculated if noControl == 1)
+    max_TSSLoad_dstream = [1.573,0.8788,1.762]
+else:
+    # Enter the max flow for normalization of the WRRF flow;
+    # if noControl == 1, this will be recalculated using no control flow peak
+    max_flow_WRRF = 223.275
+    # Enter the max flow for each branch (recalculated if noControl == 1)
+    max_flow_dstream = [93.7,49.75,75.22]
+    # Enter the max TSS load for WRRF (recalculated if noControl == 1)
+    max_TSSLoad_WRRF = 2.3675
+    # Enter the max TSS load for each (recalculated if noControl == 1)
+    max_TSSLoad_dstream = [0.8421,0.5240,1.0090]
 
 ## Weighting parameters
-# Enter upstream flooding weight
+# Enter upstream flooding weighting parameter
 beta = 1.0
-# Enter downstream objective weights based on objective type
+# Enter downstream objective weighting parameters based on objective type
 epsilon_flow = 10.0
 epsilon_TSS = 1.0
 
 ## Downstream setpoints
-# Enter either "manual" to use setpts array establish below or "automatic" to
-# determine the setpoints for each branch using MBC and setpt_WRRF
+# Enter either "manual" to use setpts array established below or "automatic" to
+# determine the setpoints for each branch using MBC and setpt_WRRF_flow/_TSS
 setptMethod = "automatic"
 # Enter 1 to not exceed setpoint or 0 to achieve setpoint
 setptThres = 0
@@ -88,30 +117,11 @@ plot = 1
 # Enter 1 to normalize downstream flows in plots and 0 otherwise
 normalize = 0
 
+## System specifications
 # Enter "english" for English units in .inp file and "metric" otherwise
 units = "english"
 # Enter "rectangular" for rectangular orifices; otherwise is not developed yet
 shapes = "rectangular"
-if wetWeather == 1:
-    # Enter the max flow for normalization of the WRRF flow;
-    # if noControl == 1, this will be recalculated using no control flow peak
-    max_flow_WRRF = 712.509
-    # Enter the max flow for each branch (recalculated if noControl == 1)
-    max_flow_dstream = [349.693,190.156,279.428]
-    # Enter the max TSS load for WRRF (recalculated if noControl == 1)
-    max_TSSLoad_WRRF = 3.533
-    # Enter the max TSS load for each (recalculated if noControl == 1)
-    max_TSSLoad_dstream = [1.573,0.8788,1.762]
-else:
-    # Enter the max flow for normalization of the WRRF flow;
-    # if noControl == 1, this will be recalculated using no control flow peak
-    max_flow_WRRF = 223.275
-    # Enter the max flow for each branch (recalculated if noControl == 1)
-    max_flow_dstream = [93.7,49.75,75.22]
-    # Enter the max TSS load for WRRF (recalculated if noControl == 1)
-    max_TSSLoad_WRRF = 2.3675
-    # Enter the max TSS load for each (recalculated if noControl == 1)
-    max_TSSLoad_dstream = [0.8421,0.5240,1.0090]
 # Enter the routing timestep in seconds
 routime_step = 10
 # Enter number of steps between control actions
@@ -123,8 +133,10 @@ discharge = 0.61
 
 ## No control simulation
 if noControl == 1:
+    # Runs simulation for no control case
     time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF = simulation_noControl(env, n_trunkline, max_depths, ustreamConduits, branchConduits, WRRFConduit)
 
+    # Prints cumulative TSS load at WRRF
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
     if plot == 1:
@@ -139,8 +151,10 @@ if noControl == 1:
         print('No control results saved')
 
 if control == 1:
+    # Runs simulation for MBC case
     time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, setpt_WRRF_flow, setpt_WRRF_TSS = simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptMethod, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF)
 
+    # Prints cumulative TSS load at WRRF
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
     if plot == 1:
