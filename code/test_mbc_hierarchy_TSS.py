@@ -85,25 +85,19 @@ epsilon_flow = 10.0
 epsilon_TSS = 1.0
 
 ## Downstream setpoints
-# Enter either "manual" to use setpts array established below or "automatic" to
-# determine the setpoints for each branch using MBC and setpt_WRRF_flow/_TSS
-setptMethod = "automatic"
 # Enter 1 to not exceed setpoint or 0 to achieve setpoint
 setptThres = 0
-# Enter branch setpoints if chose "manual" for setptMethod;
-# list in same order as n_ISDs
-setpts = [0.4,0.5,0.3]
 # Enter "flow", "TSS", or "both" for downstream objective type;
 # "both" considers both objectives simulataneously, weighting based on
 # values for epsilon_flow and epsilon_TSS provided above
-objType = "both"
-# Enter setpoints to be used if setptMethod == "automatic";
+objType = "flow"
+# Enter setpoints to be used;
 # if objType == "flow" or "TSS", only appropriate setpoint will be used
-setpt_WRRF_flow = 0.7; setpt_WRRF_TSS = 0.8
+setpt_WRRF_flow = 1.0; setpt_WRRF_TSS = 0.8
 # Enter "binary" for {0,1} gate openings or "continuous" for [0,1]
 contType = "continuous"
 # Enter 1 to include no control simulation and 0 otherwise
-noControl = 1
+noControl = 0
 # Enter 1 to include control simulation and 0 otherwise
 control = 1
 
@@ -152,13 +146,13 @@ if noControl == 1:
 
 if control == 1:
     # Runs simulation for MBC case
-    time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, setpt_WRRF_flow, setpt_WRRF_TSS = simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptMethod, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF)
+    time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, setpt_WRRF_flow, setpt_WRRF_TSS = simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF)
 
     # Prints cumulative TSS load at WRRF
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
     if plot == 1:
-        plot_control(n_trunkline, n_ISDs, setptMethod, objType, normalize, labels, colors, time_state, time_control, ustream_depths, WRRF_flow, max_flow_WRRF, setpt_WRRF_flow, WRRF_TSSLoad, max_TSSLoad_WRRF, setpt_WRRF_TSS, dstream_flows, max_flow_dstream, setpts_all, price, demands, gates)
+        plot_control(n_trunkline, n_ISDs, objType, normalize, labels, colors, time_state, time_control, ustream_depths, WRRF_flow, max_flow_WRRF, setpt_WRRF_flow, WRRF_TSSLoad, max_TSSLoad_WRRF, setpt_WRRF_TSS, dstream_flows, max_flow_dstream, setpts_all, price, demands, gates)
 
     if objType == "flow":
         print("Done with MBC, Objective: " + objType + ", Setpoint: " + str(setpt_WRRF_flow))

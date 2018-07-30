@@ -36,7 +36,7 @@ def plot_noControl(n_trunkline, n_ISDs, normalize, labels, colors, time, ustream
                     label = "No control, " + labels[a-n_trunkline],
                     color = colors[a-n_trunkline-1], linestyle = ':')
 
-def plot_control(n_trunkline, n_ISDs, setptMethod, objType, normalize, labels, colors, time_state, time_control, ustream_depths, WRRF_flow, max_flow_WRRF, setpt_WRRF_flow, WRRF_TSSLoad, max_TSSLoad_WRRF, setpt_WRRF_TSS, dstream_flows, max_flow_dstream, setpts_all, price, demands, gates):
+def plot_control(n_trunkline, n_ISDs, objType, normalize, labels, colors, time_state, time_control, ustream_depths, WRRF_flow, max_flow_WRRF, setpt_WRRF_flow, WRRF_TSSLoad, max_TSSLoad_WRRF, setpt_WRRF_TSS, dstream_flows, max_flow_dstream, setpts_all, price, demands, gates):
     ## Adds no control case results to plots
 
     for a in range(0,sum(n_ISDs)):
@@ -63,19 +63,19 @@ def plot_control(n_trunkline, n_ISDs, setptMethod, objType, normalize, labels, c
     if normalize == 1:
         plt.plot(time_state,WRRF_flow/max_flow_WRRF, label = "MBC, WRRF flow",
                 color = colors[-1], linestyle = '-')
-        if setptMethod == "automatic" and objType == "flow":
+        if objType == "flow":
             plt.plot(time_state,setpt_WRRF_flow*np.ones(len(WRRF_flow)),
                 color = 'k', label = 'Setpoint')
-        elif setptMethod == "automatic" and objType == "both":
+        elif objType == "both":
             plt.plot(time_state,setpt_WRRF_flow*np.ones(len(WRRF_flow)),
                 color = 'k', label = 'Setpoint')
     else:
         plt.plot(time_state,WRRF_flow, label = "MBC, WRRF flow",
                 color = colors[-1], linestyle = '-')
-        if setptMethod == "automatic" and objType == "flow":
+        if objType == "flow":
             plt.plot(time_state,max_flow_WRRF*setpt_WRRF_flow*np.ones(len(WRRF_flow)),
                 color = 'k', label = 'Setpoint')
-        elif setptMethod == "automatic" and objType == "both":
+        elif objType == "both":
             plt.plot(time_state,max_flow_WRRF*setpt_WRRF_flow*np.ones(len(WRRF_flow)),
                 color = 'k', label = 'Setpoint')
 
@@ -84,25 +84,24 @@ def plot_control(n_trunkline, n_ISDs, setptMethod, objType, normalize, labels, c
     if normalize == 1:
         plt.plot(time_state,WRRF_TSSLoad/max_TSSLoad_WRRF, label = "MBC, WRRF TSS Load",
                 color = colors[-1], linestyle = '-')
-        if setptMethod == "automatic" and objType == "TSS":
+        if objType == "TSS":
             plt.plot(time_state,setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                     color = 'k')
-        elif setptMethod == "automatic" and objType == "both":
+        elif objType == "both":
             plt.plot(time_state,setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                     color = 'k')
     else:
         plt.plot(time_state,WRRF_TSSLoad, label = "No control, WRRF TSS Load",
                 color = colors[-1], linestyle = '-')
-        if setptMethod == "automatic" and objType == "TSS":
+        if objType == "TSS":
             plt.plot(time_state,max_TSSLoad_WRRF*setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                     color = 'k')
-        elif setptMethod == "automatic" and objType == "both":
+        elif objType == "both":
             plt.plot(time_state,max_TSSLoad_WRRF*setpt_WRRF_TSS*np.ones(len(WRRF_TSSLoad)), label = 'Setpoint',
                     color = 'k')
 
     for a in range(0,n_trunkline):
-        # Flow at downstream point of each branch and setpts for each, for
-        # either setptMethod == "automatic" or "manual"
+        # Flow at downstream point of each branch and setpts for each
         plt.subplot(324)
         if normalize == 1:
             plt.plot(time_state,dstream_flows[:,a]/max_flow_dstream[a],

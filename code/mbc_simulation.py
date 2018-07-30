@@ -40,7 +40,7 @@ def simulation_noControl(env, n_trunkline, max_depths, ustreamConduits, branchCo
 
     return time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF
 
-def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptMethod, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF):
+def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, setptThres, contType, objType, units, shapes, discharge, uInvert, dInvert, beta, epsilon_flow, epsilon_TSS, setpt_WRRF_flow, setpt_WRRF_TSS, orificeDict, orifice_diam_all, max_depths, ustreamConduits, branchConduits, WRRFConduit, max_flow_dstream, max_TSSLoad_dstream, max_flow_WRRF, max_TSSLoad_WRRF):
     env.reset()
     done = False; j = 0
     time_state = np.empty((0,1), float)
@@ -102,51 +102,50 @@ def simulation_control(env, control_points, n_trunkline, n_ISDs, control_step, s
 
             actPrev = copy.deepcopy(action)
 
-            if setptMethod == "automatic":
-                ustream = np.zeros(n_trunkline)
-                for b in range(0,n_trunkline):
-                    branch_depths = []
-                    for e in range(0,n_ISDs[b]):
-                        branch_depths = np.hstack((branch_depths,env.depthL(ustreamConduits[sum(n_ISDs[0:b])+e])))
-                    ustream[b] = max(branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
+            ustream = np.zeros(n_trunkline)
+            for b in range(0,n_trunkline):
+                branch_depths = []
+                for e in range(0,n_ISDs[b]):
+                    branch_depths = np.hstack((branch_depths,env.depthL(ustreamConduits[sum(n_ISDs[0:b])+e])))
+                ustream[b] = max(branch_depths/max_depths[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
+            if objType == "flow":
+                WRRF_flow_tmp = env.flow(WRRFConduit)
+                dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
+                dparam = epsilon_flow
+                setpt = np.array([setpt_WRRF_flow])
+            elif objType == "TSS":
+                WRRF_flow_tmp = env.flow(WRRFConduit)
+                WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
+                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
+                dparam = epsilon_TSS
+                setpt = np.array([setpt_WRRF_TSS])
+            elif objType == "both":
+                WRRF_flow_tmp = env.flow(WRRFConduit)
+                WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
+                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                dstream = np.array([WRRF_flow_tmp/max_flow_WRRF, WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
+                dparam = np.array([epsilon_flow, epsilon_TSS])
+                setpt = np.array([setpt_WRRF_flow, setpt_WRRF_TSS])
+
+            uparam = beta
+
+            orifice_diam = np.ones(n_trunkline)
+            if (objType == "flow") or (objType == "TSS"):
+                p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
+            elif objType == "both":
+                p_b, PD_b, PS_b = mbc_noaction_multi(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
+            if PS_b == 0:
+                setpts = np.zeros(n_trunkline)
+            else:
                 if objType == "flow":
-                    WRRF_flow_tmp = env.flow(WRRFConduit)
-                    dstream = np.array([WRRF_flow_tmp/max_flow_WRRF])
-                    dparam = epsilon_flow
-                    setpt = np.array([setpt_WRRF_flow])
+                    setpts = PD_b/PS_b*setpt_WRRF_flow*max_flow_WRRF/max_flow_dstream
                 elif objType == "TSS":
-                    WRRF_flow_tmp = env.flow(WRRFConduit)
-                    WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
-                    WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
-                    dstream = np.array([WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
-                    dparam = epsilon_TSS
-                    setpt = np.array([setpt_WRRF_TSS])
+                    setpts = PD_b/PS_b*setpt_WRRF_TSS*max_TSSLoad_WRRF/max_TSSLoad_dstream
                 elif objType == "both":
-                    WRRF_flow_tmp = env.flow(WRRFConduit)
-                    WRRF_TSS_tmp = env.get_pollutant_link(WRRFConduit)
-                    WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
-                    dstream = np.array([WRRF_flow_tmp/max_flow_WRRF, WRRF_TSSLoad_tmp/max_TSSLoad_WRRF])
-                    dparam = np.array([epsilon_flow, epsilon_TSS])
-                    setpt = np.array([setpt_WRRF_flow, setpt_WRRF_TSS])
-
-                uparam = beta
-
-                orifice_diam = np.ones(n_trunkline)
-                if (objType == "flow") or (objType == "TSS"):
-                    p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
-                elif objType == "both":
-                    p_b, PD_b, PS_b = mbc_noaction_multi(ustream, dstream, setpt, uparam, dparam, n_trunkline, setptThres)
-                if PS_b == 0:
-                    setpts = np.zeros(n_trunkline)
-                else:
-                    if objType == "flow":
-                        setpts = PD_b/PS_b*setpt_WRRF_flow*max_flow_WRRF/max_flow_dstream
-                    elif objType == "TSS":
-                        setpts = PD_b/PS_b*setpt_WRRF_TSS*max_TSSLoad_WRRF/max_TSSLoad_dstream
-                    elif objType == "both":
-                        setpts_flow = PD_b/PS_b*setpt_WRRF_flow*max_flow_WRRF/max_flow_dstream
-                        setpts_TSS = PD_b/PS_b*setpt_WRRF_TSS*max_TSSLoad_WRRF/max_TSSLoad_dstream
-
+                    setpts_flow = PD_b/PS_b*setpt_WRRF_flow*max_flow_WRRF/max_flow_dstream
+                    setpts_TSS = PD_b/PS_b*setpt_WRRF_TSS*max_TSSLoad_WRRF/max_TSSLoad_dstream
+            
             for b in range(0,n_trunkline):
                 branch_depths = []
                 ustream_node_depths = []
