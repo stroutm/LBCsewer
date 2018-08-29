@@ -7,8 +7,12 @@ def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
     else:
         p = (sum(uparam*ustream) - sum(dparam*(setpts-dstream)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
+    uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        PD[i] = max(-p + uparam*ustream[i],0)
+        if ustream[i] > 0.75:
+            uparam[i] = (1+ustream[i])*uparam[i]
+    for i in range(0,n_tanks):
+        PD[i] = max(-p + uparam[i]*ustream[i],0)
     PS = sum(PD)
 
     return p, PD, PS
@@ -31,8 +35,12 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
     else:
         p = (sum(uparam*ustream) - sum(dparam*(setpts-dstream)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
+    uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        PD[i] = max(-p + uparam*ustream[i],0)
+        if ustream[i] > 0.75:
+            uparam[i] = (1+ustream[i])*uparam[i]
+    for i in range(0,n_tanks):
+        PD[i] = max(-p + uparam[i]*ustream[i],0)
     PS = sum(PD)
     for i in range(0,n_tanks):
         if PD[i] >= p:
@@ -58,8 +66,8 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
             action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
         else:
             action[i] = 0.0
-        if ustream[i] > 0.95:
-            action[i] += 0.2
+        #if ustream[i] > 0.95:
+        #    action[i] += 0.2
         action[i] = min(action[i],1.0)
 
     return p, PD, PS, action
@@ -97,8 +105,8 @@ def mbc_multi(ustream, dstream, setpts, uparam, dparam, n_tanks, action, dischar
             action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
         else:
             action[i] = 0.0
-        if ustream[i] > 0.95:
-            action[i] += 0.2
+        #if ustream[i] > 0.95:
+        #    action[i] += 0.2
         action[i] = min(action[i],1.0)
 
     return p, PD, PS, action
