@@ -26,10 +26,13 @@ n_ISDs = [1,1,1]
     # beta: upstream flooding
 weights = {'beta': 1.0,
     # epsilon_flow: downstream WRRF flow objective
-    'epsilon_flow': 10.0,
+    'epsilon_flow': 1.0,
     # epsilon_TSS: downstream WRRF TSS objective
     'epsilon_TSS': 1.0
     }
+saveNames = ['trial_flow_20170504_H_A']
+#eps_flows = [0.1,0.5,1.,2.,5.,7.,10.,20.,50.,100.]
+eps_flows = [100.0]
 
 ## Downstream setpoints
     # For setptThres, enter 1 to not exceed setpoint or 0 to achieve setpoint
@@ -167,31 +170,34 @@ if noControl == 1:
         print('No control results saved')
 
 if control == 1:
-    # Runs simulation for MBC case
-    time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams = simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes)
+    for q in range(0,len(eps_flows)):
+        weights['epsilon_flow'] = eps_flows[q]
 
-    # Prints cumulative TSS load at WRRF
-    print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
+        # Runs simulation for MBC case
+        time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams = simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes)
 
-    if plotParams['plot'] == 1:
-        plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_control, ustream_depths, WRRF_flow, WRRF_TSSLoad, dstream_flows, maxes, setpts_all, price, demands, gates)
+        # Prints cumulative TSS load at WRRF
+        print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
 
-    if ctrlParams['objType'] == "flow":
-        print("Done with MBC, Objective: " + ctrlParams['objType'] + ", Setpoint: " + str(ctrlParams['setpt_WRRF_flow']))
-    elif ctrlParams['objType'] == "TSS":
-        print("Done with MBC, Objective: " + ctrlParams['objType'] + ", Setpoint: " + str(ctrlParams['setpt_WRRF_TSS']))
-    elif ctrlParams['objType'] == "both":
-        print("Done with MBC, Objective: " + ctrlParams['objType'] + ", Flow setpoint: " + str(ctrlParams['setpt_WRRF_flow']) + ", TSS setpoint: " + str(ctrlParams['setpt_WRRF_TSS']))
+        if plotParams['plot'] == 1:
+            plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_control, ustream_depths, WRRF_flow, WRRF_TSSLoad, dstream_flows, maxes, setpts_all, price, demands, gates)
 
-    if save == 1:
-        fileName = '../data/results/control/' + saveNames[0] + '.pkl'
-        if ctrlParams['objType'] == "both":
-            with open(fileName,'w') as f:
-                pickle.dump([time,ustream_depths,WRRF_flow,ctrlParams['setpt_WRRF_flow'],ctrlParams['setpt_WRRF_TSS'],maxes['max_flow_WRRF'],maxes['max_TSSLoad_WRRF'],WRRF_TSSLoad,dstream_flows,maxes['max_flow_dstream'],demands,price,gates],f)
-        else:
-            with open(fileName,'w') as f:
-                pickle.dump([time,ustream_depths,WRRF_flow,ctrlParams['setpt_WRRF_flow'],ctrlParams['setpt_WRRF_TSS'],maxes['max_flow_WRRF'],maxes['max_TSSLoad_WRRF'],WRRF_TSSLoad,dstream_flows,setpts_all,maxes['max_flow_dstream'],demands,price,gates],f)
-        print('Control results saved')
+        if ctrlParams['objType'] == "flow":
+            print("Done with MBC, Objective: " + ctrlParams['objType'] + ", Setpoint: " + str(ctrlParams['setpt_WRRF_flow']))
+        elif ctrlParams['objType'] == "TSS":
+            print("Done with MBC, Objective: " + ctrlParams['objType'] + ", Setpoint: " + str(ctrlParams['setpt_WRRF_TSS']))
+        elif ctrlParams['objType'] == "both":
+            print("Done with MBC, Objective: " + ctrlParams['objType'] + ", Flow setpoint: " + str(ctrlParams['setpt_WRRF_flow']) + ", TSS setpoint: " + str(ctrlParams['setpt_WRRF_TSS']))
+
+        if save == 1:
+            fileName = '../data/results/control/' + saveNames[0] + '_' + '%02d' % (q+1) + '.pkl'
+            if ctrlParams['objType'] == "both":
+                with open(fileName,'w') as f:
+                    pickle.dump([ISDs,weights,time_state,time_control,ustream_depths,WRRF_flow,ctrlParams['setpt_WRRF_flow'],ctrlParams['setpt_WRRF_TSS'],maxes['max_flow_WRRF'],maxes['max_TSSLoad_WRRF'],WRRF_TSSLoad,dstream_flows,maxes['max_flow_dstream'],demands,price,gates],f)
+            else:
+                with open(fileName,'w') as f:
+                    pickle.dump([ISDs,weights,time_state,time_control,ustream_depths,WRRF_flow,ctrlParams['setpt_WRRF_flow'],ctrlParams['setpt_WRRF_TSS'],maxes['max_flow_WRRF'],maxes['max_TSSLoad_WRRF'],WRRF_TSSLoad,dstream_flows,setpts_all,maxes['max_flow_dstream'],demands,price,gates],f)
+            print('Control results saved')
 
 if plotParams['plot'] == 1:
     plot_finish(plotParams['normalize'])
