@@ -54,43 +54,81 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
 
     while not done:
         if j%sysSpecs['control_step'] != 0:
-            time_state = np.vstack((time_state,j/8640.))
-            for m in range(0,len(sysSpecs['control_points'])):
-                action[m] = gateTrans[m,int(j%sysSpecs['control_step'])]
-            for b in range(0,n_trunkline):
-                for e in range(0,n_ISDs[b]):
-                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e], action[sum(n_ISDs[0:b])+e])
-                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e], action[sum(n_ISDs)+sum(n_ISDs[0:b])+e])
-            j += 1
-            done = env.step()
+            if ctrlParams['hierarchy'] == 1:
+                time_state = np.vstack((time_state,j/8640.))
+                for m in range(0,len(sysSpecs['control_points'])):
+                    action[m] = gateTrans[m,int(j%sysSpecs['control_step'])]
+                for b in range(0,n_trunkline):
+                    for e in range(0,n_ISDs[b]):
+                        env.set_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e], action[sum(n_ISDs[0:b])+e])
+                        env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e], action[sum(n_ISDs)+sum(n_ISDs[0:b])+e])
+                j += 1
+                done = env.step()
 
-            gates_tmp = []
-            for b in range(0,n_trunkline):
-                for e in range(0,n_ISDs[b]):
-                    gates_tmp = np.hstack((gates_tmp,env.get_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e])))
-            gates_tmp = np.hstack((gates_tmp,np.zeros(sum(n_ISDs))))
+                gates_tmp = []
+                for b in range(0,n_trunkline):
+                    for e in range(0,n_ISDs[b]):
+                        gates_tmp = np.hstack((gates_tmp,env.get_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e])))
+                gates_tmp = np.hstack((gates_tmp,np.zeros(sum(n_ISDs))))
 
-            if j == 1:
-                gates = copy.deepcopy(gates_tmp)
+                if j == 1:
+                    gates = copy.deepcopy(gates_tmp)
+                else:
+                    gates = np.vstack((gates,gates_tmp))
+
+                ustream_depths_tmp = []
+                for e in range(0,len(sysSpecs['ustreamConduits'])):
+                    ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(sysSpecs['ustreamConduits'][e])/sysSpecs['max_depths'][e]))
+                ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
+                dstream_flows_tmp = []
+                for e in range(0,len(sysSpecs['branchConduits'])):
+                    dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(sysSpecs['branchConduits'][e])))
+                dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
+                WRRF_flow = np.vstack((WRRF_flow,env.flow(sysSpecs['WRRFConduit'])))
+                WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(sysSpecs['WRRFConduit'])))
+                WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
+
+                for b in range(0,n_trunkline):
+                    for e in range(0,n_ISDs[b]):
+                        env.set_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e], actCurr[sum(n_ISDs[0:b])+e])
+                        env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e], actCurr[sum(n_ISDs)+sum(n_ISDs[0:b])+e])
+
             else:
-                gates = np.vstack((gates,gates_tmp))
+                time_state = np.vstack((time_state,j/8640.))
+                for m in range(0,len(sysSpecs['control_points'])):
+                    action[m] = gateTrans[m,int(j%sysSpecs['control_step'])]
+                for e in range(0,sum(n_ISDs)):
+                    env.set_gate(sysSpecs['control_points'][e], action[e])
+                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+e], action[sum(n_ISDs)+e])
+                j += 1
+                done = env.step()
 
-            ustream_depths_tmp = []
-            for e in range(0,len(sysSpecs['ustreamConduits'])):
-                ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(sysSpecs['ustreamConduits'][e])/sysSpecs['max_depths'][e]))
-            ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
-            dstream_flows_tmp = []
-            for e in range(0,len(sysSpecs['branchConduits'])):
-                dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(sysSpecs['branchConduits'][e])))
-            dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
-            WRRF_flow = np.vstack((WRRF_flow,env.flow(sysSpecs['WRRFConduit'])))
-            WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(sysSpecs['WRRFConduit'])))
-            WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
+                gates_tmp = []
+                for b in range(0,sum(n_ISDs)):
+                    gates_tmp = np.hstack((gates_tmp,env.get_gate(sysSpecs['control_points'][e])))
+                gates_tmp = np.hstack((gates_tmp,np.zeros(sum(n_ISDs))))
 
-            for b in range(0,n_trunkline):
-                for e in range(0,n_ISDs[b]):
-                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e], actCurr[sum(n_ISDs[0:b])+e])
-                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e], actCurr[sum(n_ISDs)+sum(n_ISDs[0:b])+e])
+                if j == 1:
+                    gates = copy.deepcopy(gates_tmp)
+                else:
+                    gates = np.vstack((gates,gates_tmp))
+
+                ustream_depths_tmp = []
+                for e in range(0,len(sysSpecs['ustreamConduits'])):
+                    ustream_depths_tmp = np.hstack((ustream_depths_tmp,env.depthL(sysSpecs['ustreamConduits'][e])/sysSpecs['max_depths'][e]))
+                ustream_depths = np.vstack((ustream_depths,ustream_depths_tmp))
+                dstream_flows_tmp = []
+                for e in range(0,len(sysSpecs['branchConduits'])):
+                    dstream_flows_tmp = np.hstack((dstream_flows_tmp,env.flow(sysSpecs['branchConduits'][e])))
+                dstream_flows = np.vstack((dstream_flows,dstream_flows_tmp))
+                WRRF_flow = np.vstack((WRRF_flow,env.flow(sysSpecs['WRRFConduit'])))
+                WRRF_TSS = np.vstack((WRRF_TSS,env.get_pollutant_link(sysSpecs['WRRFConduit'])))
+                WRRF_TSSLoad = np.vstack((WRRF_TSSLoad,WRRF_flow[-1] * WRRF_TSS[-1] * 0.000062428))
+
+                for e in range(0,n_trunkline):
+                    env.set_gate(sysSpecs['control_points'][e], actCurr[e])
+                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+e], actCurr[sum(n_ISDs)+e])
+
         else:
             time_state = np.vstack((time_state,j/8640.))
             time_control = np.vstack((time_control,j/8640.))
@@ -102,119 +140,188 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
 
             actPrev = copy.deepcopy(action)
 
-            ustream = np.zeros(n_trunkline)
-            for b in range(0,n_trunkline):
-                branch_depths = []
-                for e in range(0,n_ISDs[b]):
-                    branch_depths = np.hstack((branch_depths,env.depthL(sysSpecs['ustreamConduits'][sum(n_ISDs[0:b])+e])))
-                ustream[b] = max(branch_depths/sysSpecs['max_depths'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
-            if ctrlParams['objType'] == "flow":
-                WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
-                dstream = np.array([WRRF_flow_tmp/maxes['max_flow_WRRF']])
-                dparam = weights['epsilon_flow']
-                setpt = np.array([ctrlParams['setpt_WRRF_flow']])
-            elif ctrlParams['objType'] == "TSS":
-                WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
-                WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
-                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
-                dstream = np.array([WRRF_TSSLoad_tmp/maxes['max_TSSLoad_WRRF']])
-                dparam = weights['epsilon_TSS']
-                setpt = np.array([ctrlParams['setpt_WRRF_TSS']])
-            elif ctrlParams['objType'] == "both":
-                WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
-                WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
-                WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
-                dstream = np.array([WRRF_flow_tmp/maxes['max_flow_WRRF'], WRRF_TSSLoad_tmp/maxes['max_TSSLoad_WRRF']])
-                dparam = np.array([weights['epsilon_flow'], weights['epsilon_TSS']])
-                setpt = np.array([ctrlParams['setpt_WRRF_flow'], ctrlParams['setpt_WRRF_TSS']])
-
-            uparam = weights['beta']
-
-            orifice_diam = np.ones(n_trunkline)
-            if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
-                p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, ctrlParams['setptThres'])
-            elif ctrlParams['objType'] == "both":
-                p_b, PD_b, PS_b = mbc_noaction_multi(ustream, dstream, setpt, uparam, dparam, n_trunkline, ctrlParams['setptThres'])
-            if PS_b == 0:
-                setpts = np.zeros(n_trunkline)
-            else:
+            if ctrlParams['hierarchy'] == 1:
+                ustream = np.zeros(n_trunkline)
+                for b in range(0,n_trunkline):
+                    branch_depths = []
+                    for e in range(0,n_ISDs[b]):
+                        branch_depths = np.hstack((branch_depths,env.depthL(sysSpecs['ustreamConduits'][sum(n_ISDs[0:b])+e])))
+                    ustream[b] = max(branch_depths/sysSpecs['max_depths'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])])
                 if ctrlParams['objType'] == "flow":
-                    setpts = PD_b/PS_b*ctrlParams['setpt_WRRF_flow']*maxes['max_flow_WRRF']/maxes['max_flow_dstream']
+                    WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
+                    dstream = np.array([WRRF_flow_tmp/maxes['max_flow_WRRF']])
+                    dparam = weights['epsilon_flow']
+                    setpt = np.array([ctrlParams['setpt_WRRF_flow']])
                 elif ctrlParams['objType'] == "TSS":
-                    setpts = PD_b/PS_b*ctrlParams['setpt_WRRF_TSS']*maxes['max_TSSLoad_WRRF']/maxes['max_TSSLoad_dstream']
+                    WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
+                    WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
+                    WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                    dstream = np.array([WRRF_TSSLoad_tmp/maxes['max_TSSLoad_WRRF']])
+                    dparam = weights['epsilon_TSS']
+                    setpt = np.array([ctrlParams['setpt_WRRF_TSS']])
                 elif ctrlParams['objType'] == "both":
-                    setpts_flow = PD_b/PS_b*ctrlParams['setpt_WRRF_flow']*maxes['max_flow_WRRF']/maxes['max_flow_dstream']
-                    setpts_TSS = PD_b/PS_b*ctrlParams['setpt_WRRF_TSS']*maxes['max_TSSLoad_WRRF']/maxes['max_TSSLoad_dstream']
-
-            for b in range(0,n_trunkline):
-                branch_depths = []
-                ustream_node_depths = []
-                dstream_node_depths = []
-                ustream_node_TSSConc = []
-                for e in range(0,n_ISDs[b]):
-                    branch_depths = np.hstack((branch_depths,env.depthL(sysSpecs['ustreamConduits'][sum(n_ISDs[0:b])+e])))
-                    ustream_node_depths = np.hstack((ustream_node_depths,env.depthN(orificeDict[sysSpecs['control_points'][sum(n_ISDs[0:b])+e]]['from_node'])))
-                    dstream_node_depths = np.hstack((dstream_node_depths,env.depthN(orificeDict[sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e]]['to_node'])))
-                    ustream_node_TSSConc = np.hstack((ustream_node_TSSConc,env.get_pollutant_node(orificeDict[sysSpecs['control_points'][sum(n_ISDs[0:b])+e]]['from_node'])))
-                ustream = branch_depths/sysSpecs['max_depths'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
-                if ctrlParams['objType'] == "flow":
-                    dn_flow_tmp = env.flow(sysSpecs['branchConduits'][b])
-                    dstream = np.array([dn_flow_tmp/maxes['max_flow_dstream'][b]])
-                    setpt = np.array([setpts[b]])
-                elif ctrlParams['objType'] == "TSS":
-                    dn_flow_tmp = env.flow(sysSpecs['branchConduits'][b])
-                    dn_TSS_tmp = env.get_pollutant_link(sysSpecs['branchConduits'][b])
-                    dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
-                    dstream = np.array([dn_TSSLoad_tmp/maxes['max_TSSLoad_dstream'][b]])
-                    setpt = np.array([setpts[b]])
-                elif ctrlParams['objType'] == "both":
-                    dn_flow_tmp = env.flow(sysSpecs['branchConduits'][b])
-                    dn_TSS_tmp = env.get_pollutant_link(sysSpecs['branchConduits'][b])
-                    dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
-                    dstream = np.array([[dn_flow_tmp/maxes['max_flow_dstream'][b]], [dn_TSSLoad_tmp/maxes['max_TSSLoad_dstream'][b]]])
-                    setpt = np.array([[setpts_flow[b]], [setpts_TSS[b]]])
+                    WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
+                    WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
+                    WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                    dstream = np.array([WRRF_flow_tmp/maxes['max_flow_WRRF'], WRRF_TSSLoad_tmp/maxes['max_TSSLoad_WRRF']])
+                    dparam = np.array([weights['epsilon_flow'], weights['epsilon_TSS']])
+                    setpt = np.array([ctrlParams['setpt_WRRF_flow'], ctrlParams['setpt_WRRF_TSS']])
 
                 uparam = weights['beta']
 
-                action_sub_down = np.ones(n_ISDs[b])
-                action_sub_up = np.zeros(n_ISDs[b])
+                orifice_diam = np.ones(n_trunkline)
+                if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
+                    p_b, PD_b, PS_b = mbc_noaction(ustream, dstream, setpt, uparam, dparam, n_trunkline, ctrlParams['setptThres'])
+                elif ctrlParams['objType'] == "both":
+                    p_b, PD_b, PS_b = mbc_noaction_multi(ustream, dstream, setpt, uparam, dparam, n_trunkline, ctrlParams['setptThres'])
+                if PS_b == 0:
+                    setpts = np.zeros(n_trunkline)
+                else:
+                    if ctrlParams['objType'] == "flow":
+                        setpts = PD_b/PS_b*ctrlParams['setpt_WRRF_flow']*maxes['max_flow_WRRF']/maxes['max_flow_dstream']
+                    elif ctrlParams['objType'] == "TSS":
+                        setpts = PD_b/PS_b*ctrlParams['setpt_WRRF_TSS']*maxes['max_TSSLoad_WRRF']/maxes['max_TSSLoad_dstream']
+                    elif ctrlParams['objType'] == "both":
+                        setpts_flow = PD_b/PS_b*ctrlParams['setpt_WRRF_flow']*maxes['max_flow_WRRF']/maxes['max_flow_dstream']
+                        setpts_TSS = PD_b/PS_b*ctrlParams['setpt_WRRF_TSS']*maxes['max_TSSLoad_WRRF']/maxes['max_TSSLoad_dstream']
+
+                for b in range(0,n_trunkline):
+                    branch_depths = []
+                    ustream_node_depths = []
+                    dstream_node_depths = []
+                    ustream_node_TSSConc = []
+                    for e in range(0,n_ISDs[b]):
+                        branch_depths = np.hstack((branch_depths,env.depthL(sysSpecs['ustreamConduits'][sum(n_ISDs[0:b])+e])))
+                        ustream_node_depths = np.hstack((ustream_node_depths,env.depthN(orificeDict[sysSpecs['control_points'][sum(n_ISDs[0:b])+e]]['from_node'])))
+                        dstream_node_depths = np.hstack((dstream_node_depths,env.depthN(orificeDict[sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e]]['to_node'])))
+                        ustream_node_TSSConc = np.hstack((ustream_node_TSSConc,env.get_pollutant_node(orificeDict[sysSpecs['control_points'][sum(n_ISDs[0:b])+e]]['from_node'])))
+                    ustream = branch_depths/sysSpecs['max_depths'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
+                    if ctrlParams['objType'] == "flow":
+                        dn_flow_tmp = env.flow(sysSpecs['branchConduits'][b])
+                        dstream = np.array([dn_flow_tmp/maxes['max_flow_dstream'][b]])
+                        setpt = np.array([setpts[b]])
+                    elif ctrlParams['objType'] == "TSS":
+                        dn_flow_tmp = env.flow(sysSpecs['branchConduits'][b])
+                        dn_TSS_tmp = env.get_pollutant_link(sysSpecs['branchConduits'][b])
+                        dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
+                        dstream = np.array([dn_TSSLoad_tmp/maxes['max_TSSLoad_dstream'][b]])
+                        setpt = np.array([setpts[b]])
+                    elif ctrlParams['objType'] == "both":
+                        dn_flow_tmp = env.flow(sysSpecs['branchConduits'][b])
+                        dn_TSS_tmp = env.get_pollutant_link(sysSpecs['branchConduits'][b])
+                        dn_TSSLoad_tmp = dn_flow_tmp * dn_TSS_tmp * 0.000062428
+                        dstream = np.array([[dn_flow_tmp/maxes['max_flow_dstream'][b]], [dn_TSSLoad_tmp/maxes['max_TSSLoad_dstream'][b]]])
+                        setpt = np.array([[setpts_flow[b]], [setpts_TSS[b]]])
+
+                    uparam = weights['beta']
+
+                    action_sub_down = np.ones(n_ISDs[b])
+                    action_sub_up = np.zeros(n_ISDs[b])
+                    action_sub = np.hstack((action_sub_down,action_sub_up))
+                    orifice_diam = sysSpecs['orifice_diam_all'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
+                    if ctrlParams['contType'] == "binary":
+                        p, PD, PS, action_sub = mbc_bin(ustream, dstream, setpt, uparam,
+                                            dparam, n_ISDs[b], action_sub, sysSpecs['discharge'], ctrlParams['setptThres'])
+                    elif ctrlParams['contType'] == "continuous":
+                        if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
+                            p, PD, PS, action_sub = mbc(ustream, dstream, setpt, uparam,
+                                        dparam, n_ISDs[b], action_sub, sysSpecs['discharge'],
+                                        maxes['max_flow_dstream'][b], maxes['max_TSSLoad_dstream'][b], sysSpecs['units'], orifice_diam,
+                                        sysSpecs['shapes'], ustream_node_depths, dstream_node_depths,
+                                        sysSpecs['uInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
+                                        sysSpecs['dInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
+                                        ctrlParams['setptThres'], ctrlParams['objType'], ustream_node_TSSConc)
+                        elif ctrlParams['objType'] == "both":
+                            p, PD, PS, action_sub = mbc_multi(ustream, dstream, setpt, uparam,
+                                        dparam, n_ISDs[b], action_sub, sysSpecs['discharge'],
+                                        maxes['max_flow_dstream'][b], maxes['max_TSSLoad_dstream'][b], sysSpecs['units'], orifice_diam,
+                                        sysSpecs['shapes'], ustream_node_depths, dstream_node_depths,
+                                        sysSpecs['uInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
+                                        sysSpecs['dInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
+                                        ctrlParams['setptThres'], ctrlParams['objType'], ustream_node_TSSConc)
+                    action[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = action_sub[:len(action_sub)/2]
+                    action[sum(n_ISDs[0:b])+sum(n_ISDs):sum(n_ISDs[0:b+1])+sum(n_ISDs)] = action_sub[len(action_sub)/2:]
+
+                    PDs[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = PD
+                    PSs[b] = PS
+                    ps[b] = p
+
+                    for e in range(0,n_ISDs[b]):
+                        env.set_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e], action[sum(n_ISDs[0:b])+e])
+                        env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e], action[sum(n_ISDs)+sum(n_ISDs[0:b])+e])
+
+                actCurr = copy.deepcopy(action)
+
+            else:
+                storage_depths = []
+                ustream_node_depths = []
+                dstream_node_depths = []
+                ustream_node_TSSConc = []
+                for b in range(0,sum(n_ISDs)):
+                    storage_depths = np.hstack((storage_depths,env.depthL(sysSpecs['ustreamConduits'][b])))
+                    ustream_node_depths = np.hstack((ustream_node_depths,env.depthN(orificeDict[sysSpecs['control_points'][b]]['from_node'])))
+                    dstream_node_depths = np.hstack((dstream_node_depths,env.depthN(orificeDict[sysSpecs['control_points'][sum(n_ISDs)+b]]['to_node'])))
+                    ustream_node_TSSConc = np.hstack((ustream_node_TSSConc,env.get_pollutant_node(orificeDict[sysSpecs['control_points'][b]]['from_node'])))
+                ustream = storage_depths/sysSpecs['max_depths']
+                if ctrlParams['objType'] == "flow":
+                    WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
+                    dstream = np.array([WRRF_flow_tmp/maxes['max_flow_WRRF']])
+                    dparam = weights['epsilon_flow']
+                    setpt = np.array([ctrlParams['setpt_WRRF_flow']])
+                elif ctrlParams['objType'] == "TSS":
+                    WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
+                    WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
+                    WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                    dstream = np.array([WRRF_TSSLoad_tmp/maxes['max_TSSLoad_WRRF']])
+                    dparam = weights['epsilon_TSS']
+                    setpt = np.array([ctrlParams['setpt_WRRF_TSS']])
+                elif ctrlParams['objType'] == "both":
+                    WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
+                    WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
+                    WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
+                    dstream = np.array([WRRF_flow_tmp/maxes['max_flow_WRRF'], WRRF_TSSLoad_tmp/maxes['max_TSSLoad_WRRF']])
+                    dparam = np.array([weights['epsilon_flow'], weights['epsilon_TSS']])
+                    setpt = np.array([ctrlParams['setpt_WRRF_flow'], ctrlParams['setpt_WRRF_TSS']])
+
+                uparam = weights['beta']
+
+                action_sub_down = np.ones(sum(n_ISDs))
+                action_sub_up = np.zeros(sum(n_ISDs))
                 action_sub = np.hstack((action_sub_down,action_sub_up))
-                orifice_diam = sysSpecs['orifice_diam_all'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])]
+                orifice_diam = sysSpecs['orifice_diam_all']
                 if ctrlParams['contType'] == "binary":
                     p, PD, PS, action_sub = mbc_bin(ustream, dstream, setpt, uparam,
-                                            dparam, n_ISDs[b], action_sub, sysSpecs['discharge'], ctrlParams['setptThres'])
+                                        dparam, sum(n_ISDs), action_sub, sysSpecs['discharge'], ctrlParams['setptThres'])
                 elif ctrlParams['contType'] == "continuous":
                     if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
                         p, PD, PS, action_sub = mbc(ustream, dstream, setpt, uparam,
-                                        dparam, n_ISDs[b], action_sub, sysSpecs['discharge'],
-                                        maxes['max_flow_dstream'][b], maxes['max_TSSLoad_dstream'][b], sysSpecs['units'], orifice_diam,
-                                        sysSpecs['shapes'], ustream_node_depths, dstream_node_depths,
-                                        sysSpecs['uInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
-                                        sysSpecs['dInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
-                                        ctrlParams['setptThres'], ctrlParams['objType'], ustream_node_TSSConc)
+                                    dparam, sum(n_ISDs), action_sub, sysSpecs['discharge'],
+                                    maxes['max_flow_WRRF'], maxes['max_TSSLoad_WRRF'], sysSpecs['units'], orifice_diam,
+                                    sysSpecs['shapes'], ustream_node_depths, dstream_node_depths,
+                                    sysSpecs['uInvert'], sysSpecs['dInvert'],
+                                    ctrlParams['setptThres'], ctrlParams['objType'], ustream_node_TSSConc)
                     elif ctrlParams['objType'] == "both":
                         p, PD, PS, action_sub = mbc_multi(ustream, dstream, setpt, uparam,
-                                        dparam, n_ISDs[b], action_sub, sysSpecs['discharge'],
-                                        maxes['max_flow_dstream'][b], maxes['max_TSSLoad_dstream'][b], sysSpecs['units'], orifice_diam,
-                                        sysSpecs['shapes'], ustream_node_depths, dstream_node_depths,
-                                        sysSpecs['uInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
-                                        sysSpecs['dInvert'][sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])],
-                                        ctrlParams['setptThres'], ctrlParams['objType'], ustream_node_TSSConc)
-                action[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = action_sub[:len(action_sub)/2]
-                action[sum(n_ISDs[0:b])+sum(n_ISDs):sum(n_ISDs[0:b+1])+sum(n_ISDs)] = action_sub[len(action_sub)/2:]
+                                    dparam, sum(n_ISDs), action_sub, sysSpecs['discharge'],
+                                    maxes['max_flow_WRRF'], maxes['max_TSSLoad_WRRF'], sysSpecs['units'], orifice_diam,
+                                    sysSpecs['shapes'], ustream_node_depths, dstream_node_depths,
+                                    sysSpecs['uInvert'], sysSpecs['dInvert'],
+                                    ctrlParams['setptThres'], ctrlParams['objType'], ustream_node_TSSConc)
+                action[0:sum(n_ISDs)] = action_sub[:len(action_sub)/2]
+                action[sum(n_ISDs):2*sum(n_ISDs)] = action_sub[len(action_sub)/2:]
 
-                PDs[sum(n_ISDs[0:b]):sum(n_ISDs[0:b+1])] = PD
-                PSs[b] = PS
-                ps[b] = p
+                PDs = PD
+                PSs = PS
+                ps = p
 
-                for e in range(0,n_ISDs[b]):
-                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs[0:b])+e], action[sum(n_ISDs[0:b])+e])
-                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+sum(n_ISDs[0:b])+e], action[sum(n_ISDs)+sum(n_ISDs[0:b])+e])
+                for e in range(0,sum(n_ISDs)):
+                    env.set_gate(sysSpecs['control_points'][e], action[e])
+                    env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+e], action[sum(n_ISDs)+e])
 
             actCurr = copy.deepcopy(action)
-            action = copy.deepcopy(actPrev)
 
             if sysSpecs['control_step'] > 1:
+                action = copy.deepcopy(actPrev)
                 gateTrans = np.zeros((len(sysSpecs['control_points']),sysSpecs['control_step']+1))
                 for m in range(0,len(sysSpecs['control_points'])):
                     gateTrans[m,:] = np.linspace(actPrev[m],actCurr[m],sysSpecs['control_step']+1)
@@ -236,18 +343,30 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
                 demands = PDs
                 supply = PSs
                 gates = action
-                if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
-                    setpts_all = setpts
+                if ctrlParams['hierarchy'] == 1:
+                    if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
+                        setpts_all = setpts
+                    else:
+                        setpts_all = [setpts_flow,setpts_TSS]
                 else:
-                    setpts_all = [setpts_flow,setpts_TSS]
+                    if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
+                        setpts_all = np.zeros(n_trunkline)
+                    else:
+                        setpts_all = np.zeros(2*n_trunkline)
             else:
                 price = np.vstack((price,ps))
                 demands = np.vstack((demands,PDs))
                 supply = np.vstack((supply,PSs))
                 gates = np.vstack((gates,action))
-                if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
-                    setpts_all = np.vstack((setpts_all,setpts))
+                if ctrlParams['hierarchy'] == 1:
+                    if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
+                        setpts_all = np.vstack((setpts_all,setpts))
+                    else:
+                        setpts_all = np.vstack((setpts_all,[setpts_flow,setpts_TSS]))
                 else:
-                    setpts_all = np.vstack((setpts_all,[setpts_flow,setpts_TSS]))
+                    if (ctrlParams['objType'] == "flow") or (ctrlParams['objType'] == "TSS"):
+                        setpts_all = np.vstack((setpts_all,np.zeros(n_trunkline)))
+                    else:
+                        setpts_all = np.vstack((setpts_all,np.zeros(2*n_trunkline)))
 
     return time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams

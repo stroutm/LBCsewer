@@ -43,10 +43,13 @@ ctrlParams = {'setptThres': 0,
     'objType': 'flow',
     # For setpt_WRRF_flow and setpt_WRRF_TSS, enter downstram flow and TSS
     # setpoints, respectively, normalized to no control simulation results
-    'setpt_WRRF_flow': 1.0,
-    'setpt_WRRF_TSS': 0.8,
+    'setpt_WRRF_flow': 0.36,
+    'setpt_WRRF_TSS': 0.493,
     # For contType, enter 'binary' for {0,1} gate openings or 'continuous' for [0,1]
-    'contType': 'continuous'
+    'contType': 'continuous',
+    # For hierarchy, enter 1 to have separate markets in each branch or 0 to
+    # have all control points in the same market
+    'hierarchy': 0
     }
 
 ## Generate SWMM attributes dictionaries
@@ -105,7 +108,8 @@ sysSpecs = {'uInvert': uInvert,
     }
 # For control_step, enter number of steps between control actions
 # (x min) * (60s/min) * (timestep / routime_step)
-sysSpecs['control_step'] = int(np.ceil(15.*60./sysSpecs['routime_step']))
+#sysSpecs['control_step'] = int(np.ceil(15.*60./sysSpecs['routime_step']))
+sysSpecs['control_step'] = 90
 
 # Creates environment for running simulation and getting/setting parameters
 # and states
@@ -117,13 +121,13 @@ wetWeather = 1
 # if noControl == 1
 if wetWeather == 1:
     # For max_flow_WRRF, enter no control simulation WRRF flow peak
-    maxes = {'max_flow_WRRF': 712.509,
+    maxes = {'max_flow_WRRF': 619.824290,
     # For max_flow_dstream, enter no control simulaiton flow peaks for each branch
-    'max_flow_dstream': [349.693,190.156,279.428],
+    'max_flow_dstream': [155.621567,176.707798,332.395165],
     # For max_TSSLoad_WRRF, enter no control simulation WRRF TSS load peak
-    'max_TSSLoad_WRRF': 3.533,
+    'max_TSSLoad_WRRF': 2.504154,
     # For max_TSSLoad_dstream, enter no control simulation TSS load peaks for each branch
-    'max_TSSLoad_dstream': [1.573,0.8788,1.762]
+    'max_TSSLoad_dstream': [0.850934,0.635828,1.204579]
     }
 else:
     maxes = {'max_flow_WRRF': 223.275,
@@ -136,7 +140,7 @@ else:
 # Enter 1 to save results and 0 otherwise
 save = 0
 # Enter filename to save under if save == 1
-saveNames = ['both_2018paper']
+
 # For plot, enter 1 to plot results and 0 otherwise
 plotParams = {'plot': 1,
     # For colors, provide array of hex colors for each ISD
