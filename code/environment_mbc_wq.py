@@ -16,6 +16,10 @@ class Env:
             done = True
             print("Simulation Ended")
             return done
+        
+    def terminate(self):
+        self.sim._model.swmm_end()
+        self.sim._model.swmm_close()
 
     def depthN(self, node_id):
         return self.sim._model.getNodeResult(node_id, 5)

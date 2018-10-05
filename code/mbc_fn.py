@@ -9,7 +9,9 @@ def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
     PD = np.zeros(n_tanks)
     uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        if ustream[i] > 0.75:
+        if ustream[i] > 0.95:
+            uparam[i] = (2+ustream[i])*uparam[i]
+        elif ustream[i] > 0.75:
             uparam[i] = (1+ustream[i])*uparam[i]
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam[i]*ustream[i],0)
@@ -23,8 +25,14 @@ def mbc_noaction_multi(ustream, dstream, setpts, uparam, dparam, n_tanks, setptT
     else:
         p = (sum(uparam*ustream) - dparam[0]*(setpts[0]-dstream[0]) - dparam[1]*(setpts[1]-dstream[1]))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
+    uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        PD[i] = max(-p + uparam*ustream[i],0)
+        if ustream[i] > 0.95:
+            uparam[i] = (2+ustream[i])*uparam[i]
+        elif ustream[i] > 0.75:
+            uparam[i] = (1+ustream[i])*uparam[i]
+    for i in range(0,n_tanks):
+        PD[i] = max(-p + uparam[i]*ustream[i],0)
     PS = sum(PD)
 
     return p, PD, PS
@@ -37,7 +45,9 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
     PD = np.zeros(n_tanks)
     uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        if ustream[i] > 0.75:
+        if ustream[i] > 0.95:
+            uparam[i] = (2+ustream[i])*uparam[i]
+        elif ustream[i] > 0.75:
             uparam[i] = (1+ustream[i])*uparam[i]
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam[i]*ustream[i],0)
@@ -78,8 +88,14 @@ def mbc_multi(ustream, dstream, setpts, uparam, dparam, n_tanks, action, dischar
     else:
         p = (sum(uparam*ustream) - dparam[0]*(setpts[0]-dstream[0]) - dparam[1]*(setpts[1]-dstream[1]))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
+    uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        PD[i] = max(-p + uparam*ustream[i],0)
+        if ustream[i] > 0.95:
+            uparam[i] = (2+ustream[i])*uparam[i]
+        elif ustream[i] > 0.75:
+            uparam[i] = (1+ustream[i])*uparam[i]
+    for i in range(0,n_tanks):
+        PD[i] = max(-p + uparam[i]*ustream[i],0)
     PS = sum(PD)
     for i in range(0,n_tanks):
         if PD[i] >= p:
@@ -117,8 +133,14 @@ def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge
     else:
         p = (sum(uparam*ustream) + sum(dparam*(dstream-setpts)))/(1 + n_tanks)
     PD = np.zeros(n_tanks)
+    uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        PD[i] = max(-p + uparam*ustream[i],0)
+        if ustream[i] > 0.95:
+            uparam[i] = (2+ustream[i])*uparam[i]
+        elif ustream[i] > 0.75:
+            uparam[i] = (1+ustream[i])*uparam[i]
+    for i in range(0,n_tanks):
+        PD[i] = max(-p + uparam[i]*ustream[i],0)
     PS = sum(PD)
     for i in range(0,n_tanks):
         # Binary option 1
