@@ -6,7 +6,7 @@ objType = 'TSS'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
 noRangeBegin = 1
-noRangeEnd = 5
+noRangeEnd = 11
 timeBegin = 8640
 timeEnd = 3153600 #259200
 saveType = "numpy" # "numpy" or "pickle"
@@ -105,12 +105,12 @@ for i in range(noRangeBegin,noRangeEnd):
                             'time_state': control_res_load.item().get('time_state'),
                             'time_control': control_res_load.item().get('time_control'),
                             'ustream_depths': control_res_load.item().get('ustream_depths'),
-                            'WRRF_flow': control_res_load.item().get('WRRF_flow'),
+                            'WRRF_flow': np.float32(control_res_load.item().get('WRRF_flow')),
                             'setpt_WRRF_flow': control_res_load.item().get('setpt_WRRF_flow'),
                             'setpt_WRRF_TSS': control_res_load.item().get('setpt_WRRF_TSS'),
                             'max_flow_WRRF': control_res_load.item().get('max_flow_WRRF'),
                             'max_TSSLoad_WRRF': control_res_load.item().get('max_TSSLoad_WRRF'),
-                            'WRRF_TSSLoad': control_res_load.item().get('WRRF_TSSLoad'),
+                            'WRRF_TSSLoad': np.float32(control_res_load.item().get('WRRF_TSSLoad')),
                             'dstream_flows': control_res_load.item().get('dstream_flows'),
                             'max_flow_dstream': control_res_load.item().get('max_flow_dstream'),
                             'demands': control_res_load.item().get('demands'),
@@ -123,12 +123,12 @@ for i in range(noRangeBegin,noRangeEnd):
                             'time_state': control_res_load.item().get('time_state'),
                             'time_control': control_res_load.item().get('time_control'),
                             'ustream_depths': control_res_load.item().get('ustream_depths'),
-                            'WRRF_flow': control_res_load.item().get('WRRF_flow'),
+                            'WRRF_flow': np.float32(control_res_load.item().get('WRRF_flow')),
                             'setpt_WRRF_flow': control_res_load.item().get('setpt_WRRF_flow'),
                             'setpt_WRRF_TSS': control_res_load.item().get('setpt_WRRF_TSS'),
                             'max_flow_WRRF': control_res_load.item().get('max_flow_WRRF'),
                             'max_TSSLoad_WRRF': control_res_load.item().get('max_TSSLoad_WRRF'),
-                            'WRRF_TSSLoad': control_res_load.item().get('WRRF_TSSLoad'),
+                            'WRRF_TSSLoad': np.float32(control_res_load.item().get('WRRF_TSSLoad')),
                             'dstream_flows': control_res_load.item().get('dstream_flows'),
                             'setpts_all': control_res_load.item().get('setpts_all'),
                             'max_flow_dstream': control_res_load.item().get('max_flow_dstream'),

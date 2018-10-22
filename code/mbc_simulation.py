@@ -79,9 +79,9 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
     time_control = np.empty((0,1),np.float16)
     ustream_depths = np.zeros((timesteps,len(sysSpecs['ustreamConduits'])),np.float16)
     dstream_flows = np.zeros((timesteps,n_trunkline),np.float16)
-    WRRF_flow = np.zeros((timesteps,1),np.float16)
-    WRRF_TSS = np.zeros((timesteps,1),np.float16)
-    WRRF_TSSLoad = np.zeros((timesteps,1),np.float16)
+    WRRF_flow = np.zeros((timesteps,1),np.float32)
+    WRRF_TSS = np.zeros((timesteps,1),np.float32)
+    WRRF_TSSLoad = np.zeros((timesteps,1),np.float32)
     action = np.hstack((np.ones(sum(n_ISDs)),np.zeros(sum(n_ISDs))))
     gates = np.zeros((timesteps,2*sum(n_ISDs)),np.float16)
 
