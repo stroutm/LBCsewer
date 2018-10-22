@@ -6,7 +6,7 @@ from plot_fn import plot_noControl, plot_control, plot_finish
 from GDRSS_fn import GDRSS_build
 import scipy.io as sio
 
-dataLoad = sio.loadmat('../data/results/control/resultsSumm_201806.mat')
+dataLoad = sio.loadmat('../data/results/control/resultsSumm_201701.mat')
 eps_flow = dataLoad['eps_flow'][0]
 eps_tss = dataLoad['eps_tss'][0]
 flow_var = dataLoad['flow_var']

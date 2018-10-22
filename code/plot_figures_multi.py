@@ -8,20 +8,20 @@ import scipy.io as sio
 noControl = 1
 control = 1
 
-storm = '201806'
+storm = '201701'
 objType = 'both'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
-noRangeBegin = 4
-noRangeEnd = 5
+noRangeBegin = 18
+noRangeEnd = 19
 if storm == '201701':
-    timeBegin = 8640
-    timeEnd = 1310
+    timeBegin = 1900800
+    timeEnd = min(2160000,3162240)
 elif storm == '201806':
     timeBegin = 8640
     timeEnd = 259200
 
-saveType = "pickle" # "numpy" or "pickle"
+saveType = "numpy" # "numpy" or "pickle"
 saveFileType = '.svg'
 
 save = 0
@@ -76,6 +76,7 @@ for i in range(noRangeBegin,noRangeEnd):
     plt.figure(i)
     plt.subplot(142)
     plt.plot(hours/24,rainfall, linestyle = '-')
+    plt.ylim([0,1])
 
 
 for i in range(noRangeBegin,noRangeEnd):
@@ -90,8 +91,7 @@ for i in range(noRangeBegin,noRangeEnd):
             stuff = np.load('../data/results/no_control/' + fileNamesBase + '.npy')
             plt.figure(i)
             plot_noControl(n_trunkline, n_ISDs, plotParams, stuff.item().get('time'), stuff.item().get('ustream_depths'), stuff.item().get('WRRF_flow'), stuff.item().get('WRRF_TSSLoad'), stuff.item().get('dstream_flows'), maxes, timeBegin, timeEnd)
-
-
+        del stuff
     ## Control
     if control == 1:
         if saveType == "pickle":
@@ -105,19 +105,56 @@ for i in range(noRangeBegin,noRangeEnd):
             ctrlParams['setpt_WRRF_flow'] = 195.6/447.82*ctrlParams['setpt_WRRF_flow']
             ctrlParams['setpt_WRRF_TSS'] = 1.9177/4.8736*ctrlParams['setpt_WRRF_TSS']
             plt.figure(i)
-            plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_control, ustream_depths, WRRF_flow, WRRF_TSSLoad, dstream_flows, maxes, setpts_all, price, demands, gates, timeBegin, timeEnd)
+            plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams,
+                time_state[timeBegin:timeEnd], time_control,
+                ustream_depths[timeBegin:timeEnd], WRRF_flow[timeBegin:timeEnd],
+                WRRF_TSSLoad[timeBegin:timeEnd], dstream_flows[timeBegin:timeEnd],
+                maxes, setpts_all, price, demands, gates, timeBegin, timeEnd)
+        elif saveType == "numpy":
+            stuff = np.load('../data/results/control/' + fileNamesBase + '_' + '%02d' % (i) + '.npy')
+            setpts_all = [0.]
+            ctrlParams['setpt_WRRF_flow'] = 195.6/447.82*stuff.item().get('setpt_WRRF_flow')
+            ctrlParams['setpt_WRRF_TSS'] = 1.9177/4.8736*stuff.item().get('setpt_WRRF_TSS')
+            maxes['max_flow_WRRF'] = stuff.item().get('max_flow_WRRF')
+            maxes['max_TSSLoad_WRRF'] = stuff.item().get('max_TSSLoad_WRRF')
+            maxes['max_flow_dstream'] = stuff.item().get('max_flow_dstream')
+            plt.figure(i)
+            plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams,
+                stuff.item().get('time_state')[timeBegin:timeEnd],
+                stuff.item().get('time_control'),
+                stuff.item().get('ustream_depths')[timeBegin:timeEnd],
+                stuff.item().get('WRRF_flow')[timeBegin:timeEnd],
+                stuff.item().get('WRRF_TSSLoad')[timeBegin:timeEnd],
+                stuff.item().get('dstream_flows')[timeBegin:timeEnd],
+                maxes, setpts_all, stuff.item().get('price'),
+                stuff.item().get('demands'),
+                stuff.item().get('gates'), timeBegin, timeEnd)
 
+    plot_finish(plotParams['normalize'], timeBegin, timeEnd)
 
-    plot_finish(plotParams['normalize'])
+    if saveType == "pickle":
+        if (control == 1) and (objType == 'both'):
+            plt.suptitle('beta = ' + str(weights['beta']) + ', eps_q = ' + str(weights['epsilon_flow']) + ', eps_TSS = ' + str(weights['epsilon_TSS']))
+        elif (control == 1) and (objType == 'flow'):
+            plt.suptitle('beta = ' + str(weights['beta']) + ', eps_q = ' + str(weights['epsilon_flow']))
+        elif (control == 1) and (objType == 'TSS'):
+            plt.suptitle('beta = ' + str(weights['beta']) + ', eps_TSS = ' + str(weights['epsilon_TSS']))
+        elif (control == 0) and (noControl == 1):
+            plt.suptitle('No control only')
+    elif saveType == "numpy":
+        if (control == 1) and (objType == 'both'):
+            plt.suptitle('beta = ' + str(stuff.item().get('weights')['beta']) +
+                ', eps_q = ' + str(stuff.item().get('weights')['epsilon_flow']) +
+                ', eps_TSS = ' + str(stuff.item().get('weights')['epsilon_TSS']))
+        elif (control == 1) and (objType == 'flow'):
+            plt.suptitle('beta = ' + str(stuff.item().get('weights')['beta']) +
+                ', eps_q = ' + str(stuff.item().get('weights')['epsilon_flow']))
+        elif (control == 1) and (objType == 'TSS'):
+            plt.suptitle('beta = ' + str(stuff.item().get('weights')['beta']) +
+                ', eps_TSS = ' + str(stuff.item().get('weights')['epsilon_TSS']))
+        elif (control == 0) and (noControl == 1):
+            plt.suptitle('No control only')
 
-    if (control == 1) and (objType == 'both'):
-        plt.suptitle('beta = ' + str(weights['beta']) + ', eps_q = ' + str(weights['epsilon_flow']) + ', eps_TSS = ' + str(weights['epsilon_TSS']))
-    elif (control == 1) and (objType == 'flow'):
-        plt.suptitle('beta = ' + str(weights['beta']) + ', eps_q = ' + str(weights['epsilon_flow']))
-    elif (control == 1) and (objType == 'TSS'):
-        plt.suptitle('beta = ' + str(weights['beta']) + ', eps_TSS = ' + str(weights['epsilon_TSS']))
-    elif (control == 0) and (noControl == 1):
-        plt.suptitle('No control only')
 
     if save == 1:
         plt.savefig('../data/results/figures/' + fileNamesBase + '_' + '%02d' % (i) + saveFileType)

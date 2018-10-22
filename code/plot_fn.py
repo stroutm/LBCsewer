@@ -42,7 +42,10 @@ def plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_c
     for a in range(0,sum(n_ISDs)):
         # Water depths in conduits upstream of ISDs (i.e., demanders of capacity)
         plt.subplot(141)
-        plt.plot(time_state[timeBegin:timeEnd],ustream_depths[timeBegin:timeEnd,a],
+        #plt.plot(time_state[timeBegin:timeEnd],ustream_depths[timeBegin:timeEnd,a],
+        #            label = "MBC, " + plotParams['labels'][a],
+        #            color = plotParams['colors'][a], linestyle = '-')
+        plt.plot(time_state,ustream_depths[:,a],
                     label = "MBC, " + plotParams['labels'][a],
                     color = plotParams['colors'][a], linestyle = '-')
 
@@ -61,43 +64,67 @@ def plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_c
     # Flow at downstream WRRF (i.e., seller of capacity)
     plt.subplot(143)
     if plotParams['normalize'] == 1:
-        plt.plot(time_state[timeBegin:timeEnd],WRRF_flow[timeBegin:timeEnd]/maxes['max_flow_WRRF'], label = "MBC, WRRF flow",
+        #plt.plot(time_state[timeBegin:timeEnd],WRRF_flow[timeBegin:timeEnd]/maxes['max_flow_WRRF'], label = "MBC, WRRF flow",
+        #        color = plotParams['colors'][-1], linestyle = '-')
+        plt.plot(time_state,WRRF_flow/maxes['max_flow_WRRF'], label = "MBC, WRRF flow",
                 color = plotParams['colors'][-1], linestyle = '-')
         if ctrlParams['objType'] == "flow":
-            plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_flow']*np.ones(timeEnd-timeBegin),
+            #plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
+            #    color = 'k', label = 'Setpoint')
+            plt.plot(time_state,ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
                 color = 'k', label = 'Setpoint')
         elif ctrlParams['objType'] == "both":
-            plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_flow']*np.ones(timeEnd-timeBegin),
+            #plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
+            #    color = 'k', label = 'Setpoint')
+            plt.plot(time_state,ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
                 color = 'k', label = 'Setpoint')
     else:
-        plt.plot(time_state[timeBegin:timeEnd],WRRF_flow[timeBegin:timeEnd], label = "MBC, WRRF flow",
+        #plt.plot(time_state[timeBegin:timeEnd],WRRF_flow[timeBegin:timeEnd], label = "MBC, WRRF flow",
+        #        color = plotParams['colors'][-1], linestyle = '-')
+        plt.plot(time_state,WRRF_flow, label = "MBC, WRRF flow",
                 color = plotParams['colors'][-1], linestyle = '-')
         if ctrlParams['objType'] == "flow":
-            plt.plot(time_state[timeBegin:timeEnd],maxes['max_flow_WRRF']*ctrlParams['setpt_WRRF_flow']*np.ones(timeEnd-timeBegin),
+            #plt.plot(time_state[timeBegin:timeEnd],maxes['max_flow_WRRF']*ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
+            #    color = 'k', label = 'Setpoint')
+            plt.plot(time_state,maxes['max_flow_WRRF']*ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
                 color = 'k', label = 'Setpoint')
         elif ctrlParams['objType'] == "both":
-            plt.plot(time_state[timeBegin:timeEnd],maxes['max_flow_WRRF']*ctrlParams['setpt_WRRF_flow']*np.ones(timeEnd-timeBegin),
+            #plt.plot(time_state[timeBegin:timeEnd],maxes['max_flow_WRRF']*ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
+            #    color = 'k', label = 'Setpoint')
+            plt.plot(time_state,maxes['max_flow_WRRF']*ctrlParams['setpt_WRRF_flow']*np.ones((timeEnd-timeBegin,1)),
                 color = 'k', label = 'Setpoint')
 
     # TSS load at downstream WRRF (i.e., seller of capacity)
     plt.subplot(144)
     if plotParams['normalize'] == 1:
-        plt.plot(time_state[timeBegin:timeEnd],WRRF_TSSLoad[timeBegin:timeEnd]/maxes['max_TSSLoad_WRRF'], label = "MBC, WRRF TSS Load",
+        #plt.plot(time_state[timeBegin:timeEnd],WRRF_TSSLoad[timeBegin:timeEnd]/maxes['max_TSSLoad_WRRF'], label = "MBC, WRRF TSS Load",
+        #        color = plotParams['colors'][-1], linestyle = '-')
+        plt.plot(time_state,WRRF_TSSLoad/maxes['max_TSSLoad_WRRF'], label = "MBC, WRRF TSS Load",
                 color = plotParams['colors'][-1], linestyle = '-')
         if ctrlParams['objType'] == "TSS":
-            plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_TSS']*np.ones(timeEnd-timeBegin), label = 'Setpoint',
+            #plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
+            #        color = 'k')
+            plt.plot(time_state,ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
                     color = 'k')
         elif ctrlParams['objType'] == "both":
-            plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_TSS']*np.ones(timeEnd-timeBegin), label = 'Setpoint',
+            #plt.plot(time_state[timeBegin:timeEnd],ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
+            #        color = 'k')
+            plt.plot(time_state,ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
                     color = 'k')
     else:
-        plt.plot(time_state[timeBegin:timeEnd],WRRF_TSSLoad[timeBegin:timeEnd], label = "No control, WRRF TSS Load",
+        #plt.plot(time_state[timeBegin:timeEnd],WRRF_TSSLoad[timeBegin:timeEnd], label = "MBC, WRRF TSS Load",
+        #        color = plotParams['colors'][-1], linestyle = '-')
+        plt.plot(time_state,WRRF_TSSLoad, label = "MBC, WRRF TSS Load",
                 color = plotParams['colors'][-1], linestyle = '-')
         if ctrlParams['objType'] == "TSS":
-            plt.plot(time_state[timeBegin:timeEnd],maxes['max_TSSLoad_WRRF']*ctrlParams['setpt_WRRF_TSS']*np.ones(timeEnd-timeBegin), label = 'Setpoint',
+            #plt.plot(time_state[timeBegin:timeEnd],maxes['max_TSSLoad_WRRF']*ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
+            #        color = 'k')
+            plt.plot(time_state,maxes['max_TSSLoad_WRRF']*ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
                     color = 'k')
         elif ctrlParams['objType'] == "both":
-            plt.plot(time_state[timeBegin:timeEnd],maxes['max_TSSLoad_WRRF']*ctrlParams['setpt_WRRF_TSS']*np.ones(timeEnd-timeBegin), label = 'Setpoint',
+            #plt.plot(time_state[timeBegin:timeEnd],maxes['max_TSSLoad_WRRF']*ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
+            #        color = 'k')
+            plt.plot(time_state,maxes['max_TSSLoad_WRRF']*ctrlParams['setpt_WRRF_TSS']*np.ones((timeEnd-timeBegin,1)), label = 'Setpoint',
                     color = 'k')
 
     #for a in range(0,n_trunkline):
@@ -132,14 +159,15 @@ def plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_c
         #plt.plot(time_control,price,
         #            label = "price", color = 'k', linestyle = '--')
 
-def plot_finish(normalize):
+def plot_finish(normalize, timeBegin, timeEnd):
     ## Adds labels, limits, etc. to plots and shows plot
 
     # Water depths in conduits upstream of ISDs
     plt.subplot(141)
     plt.ylabel('Upstream Normalized Conduit Depth')
     plt.ylim(0,1)
-    plt.xlim(0,30)
+    #plt.xlim(0,(timeEnd-timeBegin)*10/60/60/24)
+    plt.xlim(timeBegin*10/60/60/24,timeEnd*10/60/60/24)
     #plt.legend()
 
     # Flow at downstream WRRF
@@ -149,13 +177,15 @@ def plot_finish(normalize):
     #else:
     #    plt.ylim(0,600)
     plt.ylabel('WRRF Flow ($\mathregular{ft^3/s}$)')
-    plt.xlim(0,30)
+    #plt.xlim(0,(timeEnd-timeBegin)*10/60/60/24)
+    plt.xlim(timeBegin*10/60/60/24,timeEnd*10/60/60/24)
     #plt.legend()
 
     # TSS load at downstream WRRF
     plt.subplot(144)
     plt.ylabel('WRRF TSS Load ($\mathregular{lb/s}$)')
-    plt.xlim(0,30)
+    #plt.xlim(0,(timeEnd-timeBegin)*10/60/60/24)
+    plt.xlim(timeBegin*10/60/60/24,timeEnd*10/60/60/24)
     #plt.legend()
 
     # Flow at downstream point of each branch
@@ -172,7 +202,8 @@ def plot_finish(normalize):
     #plt.legend()
     plt.subplot(142)
     plt.ylabel('Precipitation')
-    plt.xlim(0,30)
+    #plt.xlim(0,(timeEnd-timeBegin)*10/60/60/24)
+    plt.xlim(timeBegin*10/60/60/24,timeEnd*10/60/60/24)
 
     # Market price for capacity along each branch and demands by each upstream
     # storage asset
