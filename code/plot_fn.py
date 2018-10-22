@@ -5,14 +5,14 @@ def plot_noControl(n_trunkline, n_ISDs, plotParams, time, ustream_depths, WRRF_f
     ## Adds no control case results to plots
 
     # Water depths in conduits upstream of ISDs
-    plt.subplot(221)
+    plt.subplot(141)
     for a in range(0,sum(n_ISDs)):
         plt.plot(time[timeBegin:timeEnd],ustream_depths[timeBegin:timeEnd,a],
                     label = "No control, " + plotParams['labels'][a],
                     color = plotParams['colors'][a], linestyle = ':')
 
     # Flow at downstream WRRF
-    plt.subplot(223)
+    plt.subplot(143)
     if plotParams['normalize'] == 1:
         plt.plot(time[timeBegin:timeEnd],WRRF_flow[timeBegin:timeEnd]/maxes['max_flow_WRRF'], label = "No control, WRRF flow",
                 color = plotParams['colors'][-1], linestyle = ':')
@@ -21,7 +21,7 @@ def plot_noControl(n_trunkline, n_ISDs, plotParams, time, ustream_depths, WRRF_f
                 color = plotParams['colors'][-1], linestyle = ':')
 
     # TSS load at downstream WRRF
-    plt.subplot(224)
+    plt.subplot(144)
     if plotParams['normalize'] == 1:
         plt.plot(time[timeBegin:timeEnd],WRRF_TSSLoad[timeBegin:timeEnd]/maxes['max_TSSLoad_WRRF'], label = "No control, WRRF TSS Load",
                 color = plotParams['colors'][-1], linestyle = ':')
@@ -41,16 +41,16 @@ def plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_c
 
     for a in range(0,sum(n_ISDs)):
         # Water depths in conduits upstream of ISDs (i.e., demanders of capacity)
-        plt.subplot(221)
+        plt.subplot(141)
         plt.plot(time_state[timeBegin:timeEnd],ustream_depths[timeBegin:timeEnd,a],
                     label = "MBC, " + plotParams['labels'][a],
                     color = plotParams['colors'][a], linestyle = '-')
 
         # Gate positions at all controlled ISDs
-        plt.subplot(222)
-        plt.plot(time_state[timeBegin:timeEnd],gates[timeBegin:timeEnd,a],
-                    label = "Dam down, " + plotParams['labels'][a],
-                    color = plotParams['colors'][a], linestyle = '-')
+        #plt.subplot(222)
+        #plt.plot(time_state[timeBegin:timeEnd],gates[timeBegin:timeEnd,a],
+        #            label = "Dam down, " + plotParams['labels'][a],
+        #            color = plotParams['colors'][a], linestyle = '-')
 
         # Demands by each upstream storage asset
         #plt.subplot(236)
@@ -59,7 +59,7 @@ def plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_c
         #            color = plotParams['colors'][a-n_trunkline-1], linestyle = '-')
 
     # Flow at downstream WRRF (i.e., seller of capacity)
-    plt.subplot(223)
+    plt.subplot(143)
     if plotParams['normalize'] == 1:
         plt.plot(time_state[timeBegin:timeEnd],WRRF_flow[timeBegin:timeEnd]/maxes['max_flow_WRRF'], label = "MBC, WRRF flow",
                 color = plotParams['colors'][-1], linestyle = '-')
@@ -80,7 +80,7 @@ def plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams, time_state, time_c
                 color = 'k', label = 'Setpoint')
 
     # TSS load at downstream WRRF (i.e., seller of capacity)
-    plt.subplot(224)
+    plt.subplot(144)
     if plotParams['normalize'] == 1:
         plt.plot(time_state[timeBegin:timeEnd],WRRF_TSSLoad[timeBegin:timeEnd]/maxes['max_TSSLoad_WRRF'], label = "MBC, WRRF TSS Load",
                 color = plotParams['colors'][-1], linestyle = '-')
@@ -136,23 +136,26 @@ def plot_finish(normalize):
     ## Adds labels, limits, etc. to plots and shows plot
 
     # Water depths in conduits upstream of ISDs
-    plt.subplot(221)
+    plt.subplot(141)
     plt.ylabel('Upstream Normalized Conduit Depth')
     plt.ylim(0,1)
+    plt.xlim(0,30)
     #plt.legend()
 
     # Flow at downstream WRRF
-    plt.subplot(223)
+    plt.subplot(143)
     if normalize == 1:
         plt.ylim(0,1)
     #else:
     #    plt.ylim(0,600)
     plt.ylabel('WRRF Flow ($\mathregular{ft^3/s}$)')
+    plt.xlim(0,30)
     #plt.legend()
 
     # TSS load at downstream WRRF
-    plt.subplot(224)
+    plt.subplot(144)
     plt.ylabel('WRRF TSS Load ($\mathregular{lb/s}$)')
+    plt.xlim(0,30)
     #plt.legend()
 
     # Flow at downstream point of each branch
@@ -163,10 +166,13 @@ def plot_finish(normalize):
     #plt.legend()
 
     # Gate positions at all controlled ISDs
-    plt.subplot(222)
-    plt.ylabel('Gate Opening')
-    plt.ylim(0,1)
+    #plt.subplot(222)
+    #plt.ylabel('Gate Opening')
+    #plt.ylim(0,1)
     #plt.legend()
+    plt.subplot(142)
+    plt.ylabel('Precipitation')
+    plt.xlim(0,30)
 
     # Market price for capacity along each branch and demands by each upstream
     # storage asset
