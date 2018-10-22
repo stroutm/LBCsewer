@@ -2,14 +2,14 @@ import pickle
 import numpy as np
 
 storm = '201701'
-objType = 'TSS'
+objType = 'both'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
 noRangeBegin = 1
-noRangeEnd = 11
+noRangeEnd = 101
 timeBegin = 8640
-timeEnd = 3153600 #259200
-saveType = "numpy" # "numpy" or "pickle"
+timeEnd = 3153600 #259200 #
+saveType = "pickle" # "numpy" or "pickle"
 #saveFileType = '.svg'
 routime_step = 10 # seconds
 
@@ -154,6 +154,21 @@ for i in range(noRangeBegin,noRangeEnd):
     FlowVarArr = np.zeros(timeEnd-timeBegin)
     TSSVarArr = np.zeros(timeEnd-timeBegin)
 
+    first = 0; last = 0
+    daily_max_flow_NC = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
+    daily_max_flow_C = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
+    daily_max_TSS_NC = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
+    daily_max_TSS_C = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
+    for t in range(0,int(np.floor((timeEnd-timeBegin)/24/60/60*10))):
+        first = last
+        last += 8640 # number of timesteps in a day
+        daily_max_flow_NC[t] = max(no_control_res['WRRF_flow'][first:last])
+        daily_max_flow_C[t] = max(control_res['WRRF_flow'][first:last])
+        daily_max_TSS_NC[t] = max(no_control_res['WRRF_TSSLoad'][first:last])
+        daily_max_TSS_C[t] = max(control_res['WRRF_TSSLoad'][first:last])
+    flowPeakRed = np.average(np.maximum((daily_max_flow_NC-daily_max_flow_C)/daily_max_flow_NC,np.zeros(len(daily_max_flow_C))))
+    tssLPeakRed = np.average(np.maximum((daily_max_TSS_NC-daily_max_TSS_C)/daily_max_TSS_NC,np.zeros(len(daily_max_TSS_C))))
+
     for t in range(timeBegin,timeEnd):
         if objType == "flow":
             if control_res['WRRF_flow'][t] > control_res['setpt_WRRF_flow']*no_control_res['max_flow_WRRF']:
@@ -178,8 +193,6 @@ for i in range(noRangeBegin,noRangeEnd):
         TSSVarArr[t-timeBegin] = (control_res['WRRF_TSSLoad'][t] - TSSBar)**2
     FlowVar = np.average(FlowVarArr)
     TSSVar = np.average(TSSVarArr)
-    flowPeakRed = (no_control_res['max_flow_WRRF']-max(control_res['WRRF_flow'])) / no_control_res['max_flow_WRRF']
-    tssLPeakRed = (no_control_res['max_TSSLoad_WRRF']-max(control_res['WRRF_TSSLoad'])) / no_control_res['max_TSSLoad_WRRF']
     tssLRemain = max(0,tssLCumulative_no_control - tssLCumulative_control)
     tssLRemainPercent = tssLRemain/tssLCumulative_no_control
 
