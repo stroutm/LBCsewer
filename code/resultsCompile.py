@@ -6,10 +6,10 @@ objType = 'both'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
 noRangeBegin = 1
-noRangeEnd = 101
+noRangeEnd = 2
 timeBegin = 8640
 timeEnd = 3153600 #259200 #
-saveType = "pickle" # "numpy" or "pickle"
+saveType = "numpy" # "numpy" or "pickle"
 #saveFileType = '.svg'
 routime_step = 10 # seconds
 
@@ -155,19 +155,25 @@ for i in range(noRangeBegin,noRangeEnd):
     TSSVarArr = np.zeros(timeEnd-timeBegin)
 
     first = 0; last = 0
-    daily_max_flow_NC = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
-    daily_max_flow_C = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
-    daily_max_TSS_NC = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
-    daily_max_TSS_C = np.zeros(int(np.floor((timeEnd-timeBegin)/24/60/60*10)))
-    for t in range(0,int(np.floor((timeEnd-timeBegin)/24/60/60*10))):
+    weekly_max_flow_NC = np.zeros(int(np.floor((float(timeEnd)-float(timeBegin))/24/60/60*10/7)))
+    weekly_max_flow_C = np.zeros(int(np.floor((float(timeEnd)-float(timeBegin))/24/60/60*10/7)))
+    weekly_max_TSS_NC = np.zeros(int(np.floor((float(timeEnd)-float(timeBegin))/24/60/60*10/7)))
+    weekly_max_TSS_C = np.zeros(int(np.floor((float(timeEnd)-float(timeBegin))/24/60/60*10/7)))
+    weekly_flow_peak_red = []
+    weekly_TSS_peak_red = []
+    for t in range(0,int(np.floor((float(timeEnd)-float(timeBegin))/24/60/60*10/7))):
         first = last
-        last += 8640 # number of timesteps in a day
-        daily_max_flow_NC[t] = max(no_control_res['WRRF_flow'][first:last])
-        daily_max_flow_C[t] = max(control_res['WRRF_flow'][first:last])
-        daily_max_TSS_NC[t] = max(no_control_res['WRRF_TSSLoad'][first:last])
-        daily_max_TSS_C[t] = max(control_res['WRRF_TSSLoad'][first:last])
-    flowPeakRed = np.average(np.maximum((daily_max_flow_NC-daily_max_flow_C)/daily_max_flow_NC,np.zeros(len(daily_max_flow_C))))
-    tssLPeakRed = np.average(np.maximum((daily_max_TSS_NC-daily_max_TSS_C)/daily_max_TSS_NC,np.zeros(len(daily_max_TSS_C))))
+        last += 8640*7 # number of timesteps in a week
+        weekly_max_flow_NC[t] = max(no_control_res['WRRF_flow'][first:last])
+        weekly_max_flow_C[t] = max(control_res['WRRF_flow'][first:last])
+        weekly_max_TSS_NC[t] = max(no_control_res['WRRF_TSSLoad'][first:last])
+        weekly_max_TSS_C[t] = max(control_res['WRRF_TSSLoad'][first:last])
+        if weekly_max_flow_NC[t] > 250.0:
+            weekly_flow_peak_red = np.hstack((weekly_flow_peak_red,(weekly_max_flow_NC[t]-weekly_max_flow_C[t])/weekly_max_flow_NC[t]))
+        if weekly_max_TSS_NC[t] > 2.4:
+            weekly_TSS_peak_red = np.hstack((weekly_TSS_peak_red,(weekly_max_TSS_NC[t]-weekly_max_TSS_C[t])/weekly_max_TSS_NC[t]))
+    flowPeakRed = np.average(weekly_flow_peak_red)
+    tssLPeakRed = np.average(weekly_TSS_peak_red)
 
     for t in range(timeBegin,timeEnd):
         if objType == "flow":
@@ -213,5 +219,5 @@ for i in range(noRangeBegin,noRangeEnd):
     summ[i-noRangeBegin,14] = FlowVar
     summ[i-noRangeBegin,15] = TSSVar
 
-    saveFileName = '../data/results/control/resultSumm_' + objType + '_' + storm + '.csv'
-    np.savetxt(saveFileName, summ, delimiter=",")
+    #saveFileName = '../data/results/control/resultSumm_' + objType + '_' + storm + '.csv'
+    #np.savetxt(saveFileName, summ, delimiter=",")
