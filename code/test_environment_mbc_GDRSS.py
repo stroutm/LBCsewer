@@ -12,56 +12,72 @@ gammas = [0.0] # downstream flow derivative
 zetas = [0.0] # downstream TSS loading
 
 # Downstream setpoints
-setptFlow = 0.2 # normalized to max_depth
+setptFlow = 0.4 # normalized to max_depth
 setptFlowDeriv = 0.0
 setptTSSload = 0.0
 
 # Control specifications
-repTot = 90 # only control every repTot steps
-contType = "binary" # "binary" {0,1} or "continuous" [0,1] gate openings
+repTot = 1 # only control every repTot steps
+contType = "continuous" # "binary" {0,1} or "continuous" [0,1] gate openings
 deriv = 0 # 1 to control for flow derivative; 0 otherwise
 # TSS not yet established for GDRSS
 TSS = 0 # 1 to control for TSS; 0 otherwise
 
 # Plotting/saving specifications
 save = 0 # 1 to save results; 0 otherwise
-saveNames = ['enter']
+saveNames = ['iter12_d','iter12_e','iter12_f']
     # first should be no control simulation name (if doing no control simulation);
     # all others should be for control simulations
 plot = 1 # 1 to plot results; 0 otherwise
 linestyles = ['-','-.'] # linestyles for different parameter trials
-colors = ['#00a650','#008bff','#ff4a00','#ffb502','#9200cc','#b4e300','#ff03a0','#00e3ce','#0011ab','#a40000']
+colors = ['#00a650','#008bff','#ff4a00','#ffb502','#9200cc','#b4e300','#ff03a0','#00e3ce','#0011ab','#a40000','#bf06b5']
         # colors for each upstream asset
-#ustream_labels = ['ISD002','ISD003','ISD004']
+ustream_labels = ['ISD002','ISD003','ISD004']
 #ustream_labels = ['ISD006','ISD007','ISD008','ISD009','ISD010']
-ustream_labels = ['ISD011','ISD012','ISD013']
+#ustream_labels = ['ISD011','ISD012','ISD013']
+#ustream_labels = ['2','3','4','6','7','8','9','10','11','12','13']
+#ustream_labels = ['2','6','11']
 noControl = 1 # 1 to include no control simulation; 0 otherwise
 
 # States to pull from simulation (must include upstream and downstream states
 # for control objectives)
+units = "english" # "english" for English units in .inp file; "metric" otherwise
 discharge = 1.0 # discharge coefficient of orifices
 state_space = {"depthsN":[],
-                #"depthsL":["1509","RC1951","1535"],
+                "depthsL":["1509","RC1951","1535"],
                 #"depthsL":["2160","21853","21950","2201","2388"],
-                "depthsL":["2765","2525","2360"],
-                #"flows":["1503"],
+                #"depthsL":["2765","2525","2360"],
+                #"depthsL":["1509","RC1951","1535","2160","21853","21950","2201","2388","2765","2525","2360"],
+                #"depthsL":["1509","2160","2765"],
+                "flows":["1503"],
                 #"flows":["21450"],
-                "flows":["27450"],
+                #"flows":["27450"],
+                #"flows":["Trunk02"],
                 "inflows":[]}
 n_tanks = len(state_space['depthsL']) # number of upstream tanks/conduits
-#control_points = ["ISD002_DOWN","ISD003_DOWN","ISD004_DOWN",
-#                    "ISD002_UP","ISD003_UP","ISD004_UP"]
+control_points = ["ISD002_DOWN","ISD003_DOWN","ISD004_DOWN",
+                    "ISD002_UP","ISD003_UP","ISD004_UP"]
 #control_points = ["ISD006_DOWN","ISD007_DOWN","ISD008_DOWN","ISD009_DOWN","ISD010_DOWN",
 #                    "ISD006_UP","ISD007_UP","ISD008_UP","ISD009_UP","ISD010_UP"]
-control_points = ["ISD011_DOWN","ISD012_DOWN","ISD013_DOWN",
-                    "ISD011_UP","ISD012_UP","ISD013_UP"]
-#max_depths = [13.45,20.0,14.0]
-#max_depths = [15.5,15.5,15.5,15.5,12.25] # upstream tanks/conduits max depths for
-                            # normalization
-max_depths = [15.5,10.5,11.5]
-#max_flow = 412
+#control_points = ["ISD011_DOWN","ISD012_DOWN","ISD013_DOWN",
+#                    "ISD011_UP","ISD012_UP","ISD013_UP"]
+#control_points = ["ISD002_DOWN","ISD003_DOWN","ISD004_DOWN","ISD006_DOWN","ISD007_DOWN","ISD008_DOWN","ISD009_DOWN","ISD010_DOWN","ISD011_DOWN","ISD012_DOWN","ISD013_DOWN",
+#                    "ISD002_UP","ISD003_UP","ISD004_UP","ISD006_UP","ISD007_UP","ISD008_UP","ISD009_UP","ISD010_UP","ISD011_UP","ISD012_UP","ISD013_UP"]
+#control_points = ["ISD002_DOWN","ISD006_DOWN","ISD011_DOWN",
+#                    "ISD002_UP","ISD006_UP","ISD011_UP"]
+max_depths = [13.45,20.0,14.0]
+#max_depths = [15.5,15.5,15.5,15.5,12.25] # upstream tanks/conduits max depths for normalization
+#max_depths = [15.5,10.5,11.5]
+#max_depths = [13.45,20.0,14.0,15.5,15.5,15.5,15.5,12.25,15.5,10.5,11.5]
+orifice_diam = [14.7,9.0,14.0]
+#orifice_diam = [15.5,15.5,15.5,15.5,12.25]
+#orifice_diam = [15.5,10.5,11.5]
+#orifice_diam = [14.7,9.0,14.0,15.5,15.5,15.5,15.5,12.25,15.5,10.5,11.5]
+#max_depths = [13.45,15.5,15.5]
+max_flow = 198
 #max_flow = 247 # downstream max flow for normalization
-max_flow = 373
+#max_flow = 373
+#max_flow = 1000
 routime_step = 10 # routing timestep in seconds
 
 # Input file, state space, and control points
@@ -188,7 +204,7 @@ for epsilon in epsilons:
                                                 dparam, n_tanks, action, discharge)
                 elif contType == "continuous":
                     p, PD, PS, action = mbc(ustream, dstream, setpts, uparam,
-                                            dparam, n_tanks, action, discharge, max_flow)
+                                            dparam, n_tanks, action, discharge, max_flow, units, orifice_diam)
                 actCurr = copy.deepcopy(action)
                 if repTot > 1:
                     action = copy.deepcopy(actPrev)
