@@ -8,26 +8,27 @@ import scipy.io as sio
 noControl = 1
 control = 1
 
+routime_step = 10 # number of seconds between samples
 storm = '201701'
-objType = 'both'
+objType = 'flow'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
-noRangeBegin = 18
-noRangeEnd = 19
+noRangeBegin = 1
+noRangeEnd = 2
 if storm == '201701':
-    timeBegin = 1900800
-    timeEnd = min(2160000,3162240)
+    timeBegin = 0*24*60*60/routime_step#7*24*60*60/routime_step#235*24*60
+    timeEnd = 10*24*60*60/routime_step#360*24*60*60/routime_step#330*24*60 #525600
 elif storm == '201806':
     timeBegin = 8640
     timeEnd = 259200
 
 saveType = "numpy" # "numpy" or "pickle"
-saveFileType = '.svg'
+saveFileType = '.png'#'.svg'
 
 save = 0
 show = 1
 
-fileNamesBase = 'trial_' + objType + '_' + storm + '_' + hierarchyOpt + '_' + ISD_arrangement
+fileNamesBase = 'trial2_' + objType + '_' + storm + '_' + hierarchyOpt + '_' + ISD_arrangement + '_flood'
 
 if hierarchyOpt == 'NH':
     hierarchy = 0
@@ -65,7 +66,7 @@ ctrlParams = {'setptThres': 0,
     # have all control points in the same market
     'hierarchy': hierarchy
     }
-
+'''
 if storm == '201701':
     rainData = sio.loadmat('C:/Users/Sara/Desktop/2017Rain.mat')
 elif storm == '201806':
@@ -76,20 +77,21 @@ for i in range(noRangeBegin,noRangeEnd):
     plt.figure(i)
     plt.subplot(142)
     plt.plot(hours/24,rainfall, linestyle = '-')
-    plt.ylim([0,1])
-
-
+    plt.ylim([0,2.5])
+'''
+figwid = 20
+fighgt = 6
 for i in range(noRangeBegin,noRangeEnd):
     ## No control
     if noControl == 1:
         if saveType == "pickle":
             with open('../data/results/no_control/' + fileNamesBase + '.pkl') as f:
                 time, ustream_depths, WRRF_flow, WRRF_TSSLoad, dstream_flows, maxes['max_flow_WRRF'], maxes['max_TSSLoad_WRRF'] = pickle.load(f)
-            plt.figure(i)
+            plt.figure(i,figsize=(figwid,fighgt))
             plot_noControl(n_trunkline, n_ISDs, plotParams, time, ustream_depths, WRRF_flow, WRRF_TSSLoad, dstream_flows, maxes, timeBegin, timeEnd)
         elif saveType == "numpy":
             stuff = np.load('../data/results/no_control/' + fileNamesBase + '.npy')
-            plt.figure(i)
+            plt.figure(i,figsize=(figwid,fighgt))
             plot_noControl(n_trunkline, n_ISDs, plotParams, stuff.item().get('time'), stuff.item().get('ustream_depths'), stuff.item().get('WRRF_flow'), stuff.item().get('WRRF_TSSLoad'), stuff.item().get('dstream_flows'), maxes, timeBegin, timeEnd)
         del stuff
     ## Control
@@ -109,12 +111,12 @@ for i in range(noRangeBegin,noRangeEnd):
                 time_state[timeBegin:timeEnd], time_control,
                 ustream_depths[timeBegin:timeEnd], WRRF_flow[timeBegin:timeEnd],
                 WRRF_TSSLoad[timeBegin:timeEnd], dstream_flows[timeBegin:timeEnd],
-                maxes, setpts_all, price, demands, gates, timeBegin, timeEnd)
+                maxes, setpts_all, price, demands, gates[timeBegin:timeEnd], timeBegin, timeEnd)
         elif saveType == "numpy":
             stuff = np.load('../data/results/control/' + fileNamesBase + '_' + '%02d' % (i) + '.npy')
             setpts_all = [0.]
-            ctrlParams['setpt_WRRF_flow'] = 195.6/447.82*stuff.item().get('setpt_WRRF_flow')
-            ctrlParams['setpt_WRRF_TSS'] = 1.9177/4.8736*stuff.item().get('setpt_WRRF_TSS')
+            ctrlParams['setpt_WRRF_flow'] = stuff.item().get('setpt_WRRF_flow')
+            ctrlParams['setpt_WRRF_TSS'] = stuff.item().get('setpt_WRRF_TSS')
             maxes['max_flow_WRRF'] = stuff.item().get('max_flow_WRRF')
             maxes['max_TSSLoad_WRRF'] = stuff.item().get('max_TSSLoad_WRRF')
             maxes['max_flow_dstream'] = stuff.item().get('max_flow_dstream')
@@ -128,10 +130,10 @@ for i in range(noRangeBegin,noRangeEnd):
                 stuff.item().get('dstream_flows')[timeBegin:timeEnd],
                 maxes, setpts_all, stuff.item().get('price'),
                 stuff.item().get('demands'),
-                stuff.item().get('gates'), timeBegin, timeEnd)
+                stuff.item().get('gates')[timeBegin:timeEnd], timeBegin, timeEnd)
 
-    plot_finish(plotParams['normalize'], timeBegin, timeEnd)
-
+    plot_finish(plotParams['normalize'], timeBegin, timeEnd, routime_step)
+    
     if saveType == "pickle":
         if (control == 1) and (objType == 'both'):
             plt.suptitle('beta = ' + str(weights['beta']) + ', eps_q = ' + str(weights['epsilon_flow']) + ', eps_TSS = ' + str(weights['epsilon_TSS']))
@@ -155,9 +157,10 @@ for i in range(noRangeBegin,noRangeEnd):
         elif (control == 0) and (noControl == 1):
             plt.suptitle('No control only')
 
-
     if save == 1:
+        plt.tight_layout()
         plt.savefig('../data/results/figures/' + fileNamesBase + '_' + '%02d' % (i) + saveFileType)
 
     if show == 1:
+        plt.tight_layout()
         plt.show()
