@@ -23,6 +23,7 @@ def simulation_noControl(env, n_trunkline, sysSpecs, timesteps):
         WRRF_TSSLoad[j] = WRRF_flow[j] * WRRF_TSS[j] * 0.000062428
         j += 1
         done = env.step()
+    stats = env.sim._model.flow_routing_stats()
 
     max_flow_WRRF = max(WRRF_flow)
     max_flow_dstream = np.zeros(n_trunkline)
@@ -31,8 +32,8 @@ def simulation_noControl(env, n_trunkline, sysSpecs, timesteps):
         max_flow_dstream[e] = max(dstream_flows[:,e])
         max_TSSLoad_dstream[e] = max(dstream_TSSLoad[:,e])
     max_TSSLoad_WRRF = max(WRRF_TSSLoad)
-    
-    return time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF
+
+    return time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF, stats
 
 def simulation_noControl_old(env, n_trunkline, sysSpecs, timesteps):
     done = False; j = 0
@@ -338,6 +339,8 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
             WRRF_TSS[j-1] = env.get_pollutant_link(sysSpecs['WRRFConduit'])
             WRRF_TSSLoad[j-1] = WRRF_flow[j-1] * WRRF_TSS[j-1] * 0.000062428
             
+    stats = env.sim._model.flow_routing_stats()
+    return time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams, stats
             for b in range(0,sum(n_ISDs)):
                 gates[j-1,b] = action[b]
 

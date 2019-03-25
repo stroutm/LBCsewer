@@ -44,9 +44,11 @@ elif saveType == "numpy":
                         'WRRF_TSSLoad': no_control_res_load.item().get('WRRF_TSSLoad'),
                         'dstream_flows': no_control_res_load.item().get('dstream_flows'),
                         'max_flow_WRRF': no_control_res_load.item().get('max_flow_WRRF'),
-                        'max_TSSLoad_WRRF': no_control_res_load.item().get('max_TSSLoad_WRRF')
+                        'max_TSSLoad_WRRF': no_control_res_load.item().get('max_TSSLoad_WRRF'),
+                        'flooding':no_control_res_load.item().get('stats')['flooding']
                         }
 
+summ_NC[0,16] = no_control_res['flooding']
 # Initializes summary array for performance metrics
 summ = np.zeros((noRangeEnd-noRangeBegin,16),float)
 
@@ -126,7 +128,8 @@ for i in range(noRangeBegin,noRangeEnd):
                             'max_flow_dstream': control_res_load.item().get('max_flow_dstream'),
                             'demands': control_res_load.item().get('demands'),
                             'price': control_res_load.item().get('price'),
-                            'gates': control_res_load.item().get('gates')
+                            'gates': control_res_load.item().get('gates'),
+                            'flooding': control_res_load.item().get('stats')['flooding']
                             }
         elif objType == "flow" or objType == "TSS":
             control_res = {'ISDs': control_res_load.item().get('ISDs'),
@@ -145,7 +148,8 @@ for i in range(noRangeBegin,noRangeEnd):
                             'max_flow_dstream': control_res_load.item().get('max_flow_dstream'),
                             'demands': control_res_load.item().get('demands'),
                             'price': control_res_load.item().get('price'),
-                            'gates': control_res_load.item().get('gates')
+                            'gates': control_res_load.item().get('gates'),
+                            'flooding': control_res_load.item().get('stats')['flooding']
                             }
 
     # Adjusts setpoint to account for delay between upstream and downstream
@@ -264,6 +268,7 @@ for i in range(noRangeBegin,noRangeEnd):
     summ[i-noRangeBegin,13] = timeFlooding
     summ[i-noRangeBegin,14] = FlowVar
     summ[i-noRangeBegin,15] = TSSVar
+    summ[i-noRangeBegin,16] = control_res['flooding']
 
     # Save summary array of performance metrics after each control simulation in
     # a compliation .csv file

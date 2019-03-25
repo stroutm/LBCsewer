@@ -159,7 +159,7 @@ plotParams = {'plot': 0,
 ## No control simulation
 if noControl == 1:
     # Runs simulation for no control case
-    time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF = simulation_noControl(env, n_trunkline, sysSpecs, timesteps)
+    time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF, stats = simulation_noControl(env, n_trunkline, sysSpecs, timesteps)
 
     maxes = {'max_flow_WRRF': max_flow_WRRF, 'max_flow_dstream': max_flow_dstream,
                 'max_TSSLoad_WRRF': max_TSSLoad_WRRF, 'max_TSSLoad_dstream': max_TSSLoad_dstream}
@@ -179,7 +179,7 @@ if noControl == 1:
                 pickle.dump([time,ustream_depths,WRRF_flow,WRRF_TSSLoad,dstream_flows,maxes['max_flow_WRRF'],maxes['max_TSSLoad_WRRF']],f)
         elif saveType == "numpy":
             fileName = '../data/results/no_control/' + saveNames[0] + '.npy'
-            dict = {'time':time, 'ustream_depths':ustream_depths, 'WRRF_flow':WRRF_flow, 'WRRF_TSSLoad':WRRF_TSSLoad, 'dstream_flows':dstream_flows, 'max_flow_WRRF':maxes['max_flow_WRRF'], 'max_TSSLoad_WRRF':maxes['max_TSSLoad_WRRF']}
+            dict = {'time':time, 'ustream_depths':ustream_depths, 'WRRF_flow':WRRF_flow, 'WRRF_TSSLoad':WRRF_TSSLoad, 'dstream_flows':dstream_flows, 'max_flow_WRRF':maxes['max_flow_WRRF'], 'max_TSSLoad_WRRF':maxes['max_TSSLoad_WRRF'], 'stats':stats}
             np.save(fileName,dict)
         print('No control results saved')
         del dict
@@ -194,7 +194,8 @@ if control == 1:
             counter += 1
 
             # Runs simulation for MBC case
-            time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams = simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes, timesteps)
+            time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams, stats = simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes, timesteps)
+            #time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams = simulation_control_propRelease(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes, timesteps)
 
             # Prints cumulative TSS load at WRRF
             print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
@@ -221,10 +222,10 @@ if control == 1:
                 elif saveType == "numpy":
                     fileName = '../data/results/control/' + saveNames[0] + '_' + '%02d' % (counter) + '.npy'
                     if ctrlParams['objType'] == "both":
-                        dict = {'ISDs':ISDs, 'weights':weights, 'time_state':time_state, 'time_control':time_control, 'ustream_depths':ustream_depths, 'WRRF_flow':WRRF_flow, 'setpt_WRRF_flow':ctrlParams['setpt_WRRF_flow'], 'setpt_WRRF_TSS':ctrlParams['setpt_WRRF_TSS'], 'max_flow_WRRF':maxes['max_flow_WRRF'], 'max_TSSLoad_WRRF':maxes['max_TSSLoad_WRRF'], 'WRRF_TSSLoad':WRRF_TSSLoad, 'dstream_flows':dstream_flows, 'max_flow_dstream':maxes['max_flow_dstream'], 'demands':demands, 'price':price, 'gates':gates}
+                        dict = {'ISDs':ISDs, 'weights':weights, 'time_state':time_state, 'time_control':time_control, 'ustream_depths':ustream_depths, 'WRRF_flow':WRRF_flow, 'setpt_WRRF_flow':ctrlParams['setpt_WRRF_flow'], 'setpt_WRRF_TSS':ctrlParams['setpt_WRRF_TSS'], 'max_flow_WRRF':maxes['max_flow_WRRF'], 'max_TSSLoad_WRRF':maxes['max_TSSLoad_WRRF'], 'WRRF_TSSLoad':WRRF_TSSLoad, 'dstream_flows':dstream_flows, 'max_flow_dstream':maxes['max_flow_dstream'], 'demands':demands, 'price':price, 'gates':gates, 'stats':stats}
                         np.save(fileName,dict)
                     else:
-                        dict = {'ISDs':ISDs, 'weights':weights, 'time_state':time_state, 'time_control':time_control, 'ustream_depths':ustream_depths, 'WRRF_flow':WRRF_flow, 'setpt_WRRF_flow':ctrlParams['setpt_WRRF_flow'], 'setpt_WRRF_TSS':ctrlParams['setpt_WRRF_TSS'], 'max_flow_WRRF':maxes['max_flow_WRRF'], 'max_TSSLoad_WRRF':maxes['max_TSSLoad_WRRF'], 'WRRF_TSSLoad':WRRF_TSSLoad, 'dstream_flows':dstream_flows, 'setpts_all':setpts_all, 'max_flow_dstream':maxes['max_flow_dstream'], 'demands':demands, 'price':price, 'gates':gates}
+                        dict = {'ISDs':ISDs, 'weights':weights, 'time_state':time_state, 'time_control':time_control, 'ustream_depths':ustream_depths, 'WRRF_flow':WRRF_flow, 'setpt_WRRF_flow':ctrlParams['setpt_WRRF_flow'], 'setpt_WRRF_TSS':ctrlParams['setpt_WRRF_TSS'], 'max_flow_WRRF':maxes['max_flow_WRRF'], 'max_TSSLoad_WRRF':maxes['max_TSSLoad_WRRF'], 'WRRF_TSSLoad':WRRF_TSSLoad, 'dstream_flows':dstream_flows, 'setpts_all':setpts_all, 'max_flow_dstream':maxes['max_flow_dstream'], 'demands':demands, 'price':price, 'gates':gates, 'stats':stats}
                         np.save(fileName,dict)
                 print('Control results saved')
                 del dict
