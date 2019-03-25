@@ -1,5 +1,5 @@
 from environment_mbc_wq import Env
-from mbc_simulation import simulation_noControl, simulation_control
+from mbc_simulation import simulation_noControl, simulation_control, simulation_control_propRelease
 from plot_fn import plot_noControl, plot_control, plot_finish
 from GDRSS_fn import GDRSS_build
 import numpy as np
@@ -29,26 +29,26 @@ weights = {'beta': 1.0,
     # epsilon_flow: downstream WRRF flow objective
     'epsilon_flow': 1.0,
     # epsilon_TSS: downstream WRRF TSS objective
-    'epsilon_TSS': 1.0
+    'epsilon_TSS': 0.0
     }
-saveNames = ['trial_both_201701_NH_A_more2']
+saveNames = ['trial2_flow_201701_NH_A_flood']
 saveType = "numpy" # or "pickle"
-#eps_flows = [0.1,0.5,1.,2.,5.,7.,10.,20.,50.,100.]
-eps_flows = [0.1,1.,10.,100.]
-#eps_TSS = [0.1,0.5,1.,2.,5.,7.,10.,20.,50.,100.]
-eps_TSS = [0.5,2.,5.,7.,20.,50.]
+eps_flows = [1.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
+eps_TSS = [1.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
+# Counter for saving results (starts at counter+1)
+counter = 0
 
 ## Downstream setpoints
     # For setptThres, enter 1 to not exceed setpoint or 0 to achieve setpoint
-ctrlParams = {'setptThres': 0,
+ctrlParams = {'setptThres': 1,
     # For objType, enter 'flow', 'TSS', or 'both' for downstream objective type;
     # 'both' considers both objectives simulataneously, weighting based on
     # values for epsilon_flow and epsilon_TSS provided above
-    'objType': 'both',
+    'objType': 'flow',
     # For setpt_WRRF_flow and setpt_WRRF_TSS, enter downstram flow and TSS
     # setpoints, respectively, normalized to no control simulation results
-    'setpt_WRRF_flow': 0.1376, #0.136
-    'setpt_WRRF_TSS': 0.4444, #0.2458
+    'setpt_WRRF_flow': 2.5, #0.25, #1.1, #0.144154, #0.7,
+    'setpt_WRRF_TSS': 2.5, #1.0,
     # For contType, enter 'binary' for {0,1} gate openings or 'continuous' for [0,1]
     'contType': 'continuous',
     # For hierarchy, enter 1 to have separate markets in each branch or 0 to
@@ -65,8 +65,8 @@ headers = ['[TITLE]','[OPTIONS]','[EVAPORATION]','[RAINGAGES]','[SUBCATCHMENTS]'
     '[TIMESERIES]','[PATTERNS]','[REPORT]','[TAGS]','[MAP]','[COORDINATES]',
     '[VERTICES]','[Polygons]','[SYMBOLS]','[PROFILES]']
 # Enter .inp file name and location
-inpF = "../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows_201701.inp"
-timesteps = 3162240 #259319 #34562
+inpF = "../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows_201701_timesteps.inp"
+timesteps = 365*24*60*60/10 #525600
 # Sections and dictionaries generated for SWMM attributes;
 # used for pulling parameters and states
 sections = swmm.make_sections(inpF,headers)
@@ -113,8 +113,7 @@ sysSpecs = {'uInvert': uInvert,
     }
 # For control_step, enter number of steps between control actions
 # (x min) * (60s/min) * (timestep / routime_step)
-#sysSpecs['control_step'] = int(np.ceil(15.*60./sysSpecs['routime_step']))
-sysSpecs['control_step'] = 90
+sysSpecs['control_step'] = 15*60/sysSpecs['routime_step']
 
 # Creates environment for running simulation and getting/setting parameters
 # and states
@@ -163,6 +162,8 @@ if noControl == 1:
 
     maxes = {'max_flow_WRRF': max_flow_WRRF, 'max_flow_dstream': max_flow_dstream,
                 'max_TSSLoad_WRRF': max_TSSLoad_WRRF, 'max_TSSLoad_dstream': max_TSSLoad_dstream}
+    maxes = {'max_flow_WRRF': 222.3, 'max_flow_dstream': max_flow_dstream,
+                'max_TSSLoad_WRRF': 2.3165, 'max_TSSLoad_dstream': max_TSSLoad_dstream}
 
     # Prints cumulative TSS load at WRRF
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
@@ -184,7 +185,9 @@ if noControl == 1:
         print('No control results saved')
         del dict
 
-counter = 0
+maxes['max_flow_WRRF'] = 222.3
+maxes['max_TSSLoad_WRRF'] = 2.3165
+        
 if control == 1:
     for q in range(0,len(eps_flows)):
         weights['epsilon_flow'] = eps_flows[q]
