@@ -1,6 +1,49 @@
 import numpy as np
 from orifice_testing import get_target_setting
 
+def propRelease(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, max_TSSLoad, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres, objType, ustream_TSSConc):
+    if setptThres == 1:
+        p = (sum(uparam*ustream) - dparam[0]*np.maximum(setpts[0]-dstream[0],0.) - dparam[1]*np.maximum(setpts[1]-dstream[1],0.))/(1 + n_tanks)
+    else:
+        p = (sum(uparam*ustream) - dparam[0]*(setpts[0]-dstream[0]) - dparam[1]*(setpts[1]-dstream[1]))/(1 + n_tanks)
+    PD = np.zeros(n_tanks)
+    C = np.zeros(n_tanks)
+    uparam = uparam*np.ones(n_tanks)
+    for i in range(0,n_tanks):
+        if ustream[i] > 0.95:
+            uparam[i] = (2+ustream[i])*uparam[i]
+        elif ustream[i] > 0.75:
+            uparam[i] = (1+ustream[i])*uparam[i]
+    for i in range(0,n_tanks):
+        C[i] = ustream[i]**2
+        PD[i] = max(-p + uparam[i]*ustream[i],0)
+    Cbar = sum(C)/n_tanks
+    #PS = sum(PD)
+    PS = sum(PD[PD>=p])
+    for i in range(0,n_tanks):
+        if objType == "flow":
+            Qi = C[i]/Cbar*setpts[0]*max_flow
+        elif objType == "TSS":
+            if ustream_TSSConc[i] < 0.01:
+                Qi = 0
+            else:
+                Qi = C[i]/Cbar*setpts[1]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
+        elif objType == "both":
+            Qi_flow = C[i]/Cbar*setpts[0]*max_flow
+            if ustream_TSSConc[i] < 0.01:
+                Qi_TSS = 0
+            else:
+                Qi_TSS = C[i]/Cbar*setpts[1]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
+            Qi = (dparam[0]*Qi_flow+dparam[1]*Qi_TSS)/(dparam[0]+dparam[1])
+
+        action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
+
+        #if ustream[i] > 0.95:
+        #    action[i] += 0.2
+        action[i] = min(action[i],1.0)
+
+    return p, C, Cbar, action
+
 def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
     if setptThres == 1:
         p = (sum(uparam*ustream) - sum(dparam*np.maximum(setpts-dstream,np.zeros(len(dstream)))))/(1 + n_tanks)
@@ -9,13 +52,15 @@ def mbc_noaction(ustream, dstream, setpts, uparam, dparam, n_tanks, setptThres):
     PD = np.zeros(n_tanks)
     uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        if ustream[i] > 0.95:
-            uparam[i] = (2+ustream[i])*uparam[i]
-        elif ustream[i] > 0.75:
-            uparam[i] = (1+ustream[i])*uparam[i]
+        uparam[i] = uparam[i] * (1+ustream[i])
+        #if ustream[i] > 0.95:
+        #    uparam[i] = (2+ustream[i])*uparam[i]
+        #elif ustream[i] > 0.75:
+        #    uparam[i] = (1+ustream[i])*uparam[i]
     for i in range(0,n_tanks):
         PD[i] = max(-p + uparam[i]*ustream[i],0)
-    PS = sum(PD)
+    #PS = sum(PD)
+    PS = sum(PD[PD>=p])
 
     return p, PD, PS
 
