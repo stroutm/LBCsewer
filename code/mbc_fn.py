@@ -85,33 +85,65 @@ def mbc_noaction_multi(ustream, dstream, setpts, uparam, dparam, n_tanks, setptT
     return p, PD, PS
 
 def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, max_TSSLoad, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres, objType, ustream_TSSConc):
+    alpha = uparam*np.ones(n_tanks)
+    beta = np.zeros(n_tanks)
+    betamax = 2
+    N = 1 #TESTING
+    #ORIGINAL.0 uparam = uparam*np.ones(n_tanks)
+    for i in range(0,n_tanks):
+        #ORINGAL.1 beta[i] = alpha[i] * (1+ustream[i])
+        #beta[i] = alpha[i]*ustream[i] #TESTING1
+        beta[i] = alpha[i]*(np.exp(N*ustream[i])-1)/(np.exp(N)-1) #TESTING2
+        #ORIGINAL.0 uparam[i] = uparam[i] * (1+ustream[i])
     if setptThres == 1:
-        p = (sum(uparam*ustream) - sum(dparam*np.maximum(setpts-dstream,np.zeros(len(dstream)))))/(1 + n_tanks)
-        #p = (sum(uparam*ustream) - sum(dparam*np.maximum(dstream-1.,np.zeros(len(dstream)))))/(1 + n_tanks)
+        Cbar = (sum(beta*ustream) - sum(dparam*np.maximum(setpts-dstream,np.zeros(len(dstream)))))/(1 + n_tanks)
+        #ORIGINAL.0 p = (sum(uparam*ustream) - sum(dparam*np.maximum(setpts-dstream,np.zeros(len(dstream)))))/(1 + n_tanks)
     else:
-        p = (sum(uparam*ustream) - sum(dparam*(setpts-dstream)))/(1 + n_tanks)
-        #p = (sum(uparam*ustream) - sum(dparam*(1.-dstream)))/(1 + n_tanks)
+        Cbar = (sum(beta*ustream) - sum(dparam*(setpts-dstream)))/(1 + n_tanks)
+        #ORIGINAL.0 p = (sum(uparam*ustream) - sum(dparam*(setpts-dstream)))/(1 + n_tanks)
+    releaseCrit = np.zeros(n_tanks)
     PD = np.zeros(n_tanks)
-    uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        uparam[i] = uparam[i] * (1+ustream[i])
-        #if ustream[i] > 0.95:
-        #    uparam[i] = (2+ustream[i])*uparam[i]
-        #elif ustream[i] > 0.75:
-        #    uparam[i] = (1+ustream[i])*uparam[i]
+        #ORIGINAL.1 releaseCrit[i] = max(beta[i]/betamax*ustream[i],0.)
+        releaseCrit[i] = (np.exp(N*ustream[i])-1)/(np.exp(N)-1) #TESTING1
+        PD[i] = max(beta[i]*ustream[i]-Cbar,0.)
+        #ORIGINAL.0 PD[i] = max(-p + uparam[i]*ustream[i],0.)
+        #PD[i] = ustream[i]-Cbar #TESTING2
+        PD[i] = max(beta[i]*ustream[i]-Cbar,0.) #TESTING2.2
+        #PD[i] = beta[i] #TESTING2.3
+        #PD[i] = beta[i]*ustream[i] #TESTING2.4
+    PS = sum(PD[releaseCrit>=Cbar])
+    PS = sum(PD) #TESTING2
+    #ORIGINAL.0 PS = sum(PD[PD>=p])
     for i in range(0,n_tanks):
-        PD[i] = max(-p + uparam[i]*ustream[i],0.)
-        #PD[i] = max(uparam[i]*ustream[i],0.)
-    #PS = sum(PD)
-    PS = sum(PD[PD>=p])
-    for i in range(0,n_tanks):
-        if PD[i] >= p:
+        #TESTING2
+        if objType == "flow":
+            Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
+        elif objType == "TSS":
+            if ustream_TSSConc[i] < 0.01:
+                Qi = 0
+                #ADDED TO CHECK
+                print('i = ' + str(i))
+                print(ustream_TSSConc[i])
+            else:
+                Qi = PD[i]/PS*setpts[0]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
+        elif objType == "both":
+            Qi_flow = PD[i]/PS*setpts[0]*max_flow
+            if ustream_TSSConc[i] < 0.01:
+                Qi_TSS = 0
+            else:
+                Qi_TSS = PD[i]/PS*setpts[1]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
+            Qi = (dparam[0]*Qi_flow+dparam[1]*Qi_TSS)/(dparam[0]+dparam[1])
+
+        action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
+        '''
+        if releaseCrit[i] >= Cbar:
+        #ORIGINAL.0 if PD[i] >= p:
             if PS == 0:
                 Qi = 0
             else:
                 if objType == "flow":
                     Qi = PD[i]/PS*setpts[0]*max_flow # setpts[0] assumed to be downstream flow setpoint
-                    #Qi = PD[i]/PS*setpts[0]
                 elif objType == "TSS":
                     if ustream_TSSConc[i] < 0.01:
                         Qi = 0
@@ -120,44 +152,64 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
                         print(ustream_TSSConc[i])
                     else:
                         Qi = PD[i]/PS*setpts[0]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
-                        #Qi = PD[i]/PS*setpts[0]/ustream_TSSConc[i]/0.000062428
                 elif objType == "both":
                     Qi_flow = PD[i]/PS*setpts[0]*max_flow
                     if ustream_TSSConc[i] < 0.01:
                         Qi_TSS = 0
                     else:
                         Qi_TSS = PD[i]/PS*setpts[1]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
-                    # Weight desired flow by dparam (epsilon) values
                     Qi = (dparam[0]*Qi_flow+dparam[1]*Qi_TSS)/(dparam[0]+dparam[1])
 
             action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
         else:
             action[i] = 0.0
-        #if ustream[i] > 0.95:
-        #    action[i] += 0.2
+        '''
         action[i] = min(action[i],1.0)
 
-    return p, PD, PS, action
+    return Cbar, PD, PS, action
 
 def mbc_multi(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, max_flow, max_TSSLoad, units, orifice_diams, shape, ustream_node_depths, dstream_node_depths, uInvert, dInvert, setptThres, objType, ustream_TSSConc):
+    alpha = uparam*np.ones(n_tanks)
+    beta = np.zeros(n_tanks)
+    betamax = 2
+    N = 1 #TESTING
+    #ORIGINAL.0 uparam = uparam*np.ones(n_tanks)
+    for i in range(0,n_tanks):
+        #ORIGINAL.1 beta[i] = alpha[i] * (1+ustream[i])
+        #beta[i] = alpha[i]*ustream[i] #TESTING1
+        beta[i] = alpha[i]*(np.exp(N*ustream[i])-1)/(np.exp(N)-1) #TESTING2
+        #ORIGINAL.0 uparam[i] = uparam[i] * (1+ustream[i])
     if setptThres == 1:
-        p = (sum(uparam*ustream) - dparam[0]*np.maximum(setpts[0]-dstream[0],0.) - dparam[1]*np.maximum(setpts[1]-dstream[1],0.))/(1 + n_tanks)
+        Cbar = (sum(beta*ustream) - dparam[0]*np.maximum(setpts[0]-dstream[0],0.) - dparam[1]*np.maximum(setpts[1]-dstream[1],0.))/(1 + n_tanks)
+        #ORIGINAL.0 p = (sum(uparam*ustream) - dparam[0]*np.maximum(setpts[0]-dstream[0],0.) - dparam[1]*np.maximum(setpts[1]-dstream[1],0.))/(1 + n_tanks)
     else:
-        p = (sum(uparam*ustream) - dparam[0]*(setpts[0]-dstream[0]) - dparam[1]*(setpts[1]-dstream[1]))/(1 + n_tanks)
+        Cbar = (sum(beta*ustream) - dparam[0]*(setpts[0]-dstream[0]) - dparam[1]*(setpts[1]-dstream[1]))/(1 + n_tanks)
+        #ORIGINAL.0 p = (sum(uparam*ustream) - dparam[0]*(setpts[0]-dstream[0]) - dparam[1]*(setpts[1]-dstream[1]))/(1 + n_tanks)
+    releaseCrit = np.zeros(n_tanks)
     PD = np.zeros(n_tanks)
-    uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
-        uparam[i] = uparam[i] * (1+ustream[i])
-        #if ustream[i] > 0.95:
-        #    uparam[i] = (2+ustream[i])*uparam[i]
-        #elif ustream[i] > 0.75:
-        #    uparam[i] = (1+ustream[i])*uparam[i]
+        #ORIGINAL.1 releaseCrit[i] = max(beta[i]/betamax*ustream[i],0.)
+        releaseCrit[i] = (np.exp(N*ustream[i])-1)/(np.exp(N)-1) #TESTING1
+        PD[i] = max(beta[i]*ustream[i]-Cbar,0.)
+        #ORIGINAL.0 PD[i] = max(-p + uparam[i]*ustream[i],0.)
+        PD[i] = max(beta[i]*ustream[i]-Cbar,0.) #TESTING2.2
+    PS = sum(PD[releaseCrit>=Cbar])
+    PS = sum(PD) #TESTING2
+    #ORIGINAL.0 PS = sum(PD[PD>=p])
     for i in range(0,n_tanks):
-        PD[i] = max(-p + uparam[i]*ustream[i],0)
-    #PS = sum(PD)
-    PS = sum(PD[PD>=p])
-    for i in range(0,n_tanks):
-        if PD[i] >= p:
+        if objType == "both":
+            Qi_flow = PD[i]/PS*setpts[0]*max_flow
+            if ustream_TSSConc[i] < 0.01:
+                Qi_TSS = 0
+            else:
+                Qi_TSS = PD[i]/PS*setpts[1]*max_TSSLoad/ustream_TSSConc[i]/0.000062428
+            # Weight desired flow by dparam (epsilon) values
+            Qi = (dparam[0]*Qi_flow+dparam[1]*Qi_TSS)/(dparam[0]+dparam[1])
+
+        action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
+        '''
+        if releaseCrit[i] >= Cbar:
+        #ORIGINAL.0 if PD[i] >= p:
             if PS == 0:
                 Qi = 0
             else:
@@ -180,11 +232,12 @@ def mbc_multi(ustream, dstream, setpts, uparam, dparam, n_tanks, action, dischar
             action[i], note, head = get_target_setting(ustream_node_depths[i],dstream_node_depths[i],Qi,action[i],shape,units,discharge,orifice_diams[i],uInvert[i],dInvert[i])
         else:
             action[i] = 0.0
+        '''
         #if ustream[i] > 0.95:
         #    action[i] += 0.2
         action[i] = min(action[i],1.0)
 
-    return p, PD, PS, action
+    return Cbar, PD, PS, action
 
 def mbc_bin(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, setptThres):
     if setptThres == 1:

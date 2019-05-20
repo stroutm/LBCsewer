@@ -31,10 +31,11 @@ weights = {'beta': 1.0,
     # epsilon_TSS: downstream WRRF TSS objective
     'epsilon_TSS': 0.0
     }
-saveNames = ['trial2_flow_201701_NH_A_flood']
+saveNames = ['trial2_TSS_201701_NH_A_flood_short']
+saveNames = ['test_both_final_short']
 saveType = "numpy" # or "pickle"
-eps_flows = [1.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
-eps_TSS = [1.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
+eps_flows = [1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
+eps_TSS = [1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
 # Counter for saving results (starts at counter+1)
 counter = 0
 
@@ -44,7 +45,7 @@ ctrlParams = {'setptThres': 1,
     # For objType, enter 'flow', 'TSS', or 'both' for downstream objective type;
     # 'both' considers both objectives simulataneously, weighting based on
     # values for epsilon_flow and epsilon_TSS provided above
-    'objType': 'flow',
+    'objType': 'both',
     # For setpt_WRRF_flow and setpt_WRRF_TSS, enter downstram flow and TSS
     # setpoints, respectively, normalized to no control simulation results
     'setpt_WRRF_flow': 2.5, #0.25, #1.1, #0.144154, #0.7,
@@ -66,7 +67,7 @@ headers = ['[TITLE]','[OPTIONS]','[EVAPORATION]','[RAINGAGES]','[SUBCATCHMENTS]'
     '[VERTICES]','[Polygons]','[SYMBOLS]','[PROFILES]']
 # Enter .inp file name and location
 inpF = "../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows_201701_timesteps.inp"
-timesteps = 365*24*60*60/10 #525600
+timesteps = 62*24*60*60/10 #365*24*60*60/10
 # Sections and dictionaries generated for SWMM attributes;
 # used for pulling parameters and states
 sections = swmm.make_sections(inpF,headers)
