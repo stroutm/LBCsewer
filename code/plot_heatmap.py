@@ -17,6 +17,7 @@ flow_peak_red = dataLoad['flow_peak_red']
 tss_peak_red = dataLoad['tss_peak_red']
 tss_load_remaining = dataLoad['tss_load_remaining']
 timeFlood = dataLoad['timeFlood']
+volFloodPercent = dataLoad['volFloodPercent']
 
 #fig1, ax1 = plt.subplots()
 #im1 = ax1.imshow(flow_var)
@@ -124,28 +125,28 @@ def heatmap(data, col_labels, row_labels, xLabel, yLabel, ax=None,
 
     return im, cbar
 
-cmaps = ["viridis","magma","inferno","YlGnBu_r"]
+cmaps = ["viridis","magma","inferno","YlGnBu_r","coolwarm"]
 cmapsNo = 2
 
 
 fig1, ax1 = plt.subplots()
-im1, cbar1 = heatmap2(flow_var, 1000, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax1,
+im1, cbar1 = heatmap2(flow_var, 400, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax1,
                    cmap=cmaps[cmapsNo], cbarlabel="Dry-Weather Flow Variance")
 fig2, ax2 = plt.subplots()
-im2, cbar2 = heatmap2(tss_var, 0.1, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax2,
+im2, cbar2 = heatmap2(tss_var, 0.05, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax2,
                    cmap=cmaps[cmapsNo], cbarlabel="Dry-Weather TSS Load Variance")
 fig3, ax3 = plt.subplots()
 im3, cbar3 = heatmap(flow_peak, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax3,
                    cmap=cmaps[cmapsNo], cbarlabel="Control/No Control Flow Peak")
 fig4, ax4 = plt.subplots()
-im4, cbar4 = heatmap(tss_peak, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax4,
+im4, cbar4 = heatmap2(tss_peak, 0.5, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax4,
                    cmap=cmaps[cmapsNo], cbarlabel="Control/No Control TSS Load Peak")
 fig5, ax5 = plt.subplots()
 im5, cbar5 = heatmap(tss_load_remaining, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax5,
                    cmap=cmaps[cmapsNo], cbarlabel="Fraction of TSS Load Remaining in Sewer")
 fig6, ax6 = plt.subplots()
-im6, cbar6 = heatmap(timeFlood, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax6,
-                   cmap=cmaps[cmapsNo], cbarlabel="Timesteps where a Storage is Full")
+im6, cbar6 = heatmap(volFloodPercent, eps_tss, eps_flow, "eps_TSS", "eps_flow", ax=ax6,
+                   cmap=cmaps[cmapsNo], cbarlabel="Flooding Fraction of Total Volume")
 
 fig1.tight_layout()
 fig2.tight_layout()
