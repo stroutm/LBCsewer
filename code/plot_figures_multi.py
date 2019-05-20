@@ -10,14 +10,14 @@ control = 1
 
 routime_step = 10 # number of seconds between samples
 storm = '201701'
-objType = 'flow'
+objType = 'both'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
-noRangeBegin = 1
-noRangeEnd = 2
+noRangeBegin = 2
+noRangeEnd = 3
 if storm == '201701':
-    timeBegin = 0*24*60*60/routime_step#7*24*60*60/routime_step#235*24*60
-    timeEnd = 10*24*60*60/routime_step#360*24*60*60/routime_step#330*24*60 #525600
+    timeBegin = 2*24*60*60/routime_step #7*24*60*60/routime_step
+    timeEnd = 62*24*60*60/routime_step #360*24*60*60/routime_step
 elif storm == '201806':
     timeBegin = 8640
     timeEnd = 259200
@@ -28,7 +28,8 @@ saveFileType = '.png'#'.svg'
 save = 0
 show = 1
 
-fileNamesBase = 'trial2_' + objType + '_' + storm + '_' + hierarchyOpt + '_' + ISD_arrangement + '_flood'
+fileNamesBase = 'trial2_' + objType + '_' + storm + '_' + hierarchyOpt + '_' + ISD_arrangement + '_flood_short'
+fileNamesBase = 'test_both_6'
 
 if hierarchyOpt == 'NH':
     hierarchy = 0
