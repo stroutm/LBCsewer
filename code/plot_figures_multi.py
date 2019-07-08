@@ -10,11 +10,11 @@ control = 1
 
 routime_step = 10 # number of seconds between samples
 storm = '201701'
-objType = 'both'
+objType = 'TSS'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
-noRangeBegin = 2
-noRangeEnd = 3
+noRangeBegin = 5
+noRangeEnd = 6
 if storm == '201701':
     timeBegin = 2*24*60*60/routime_step #7*24*60*60/routime_step
     timeEnd = 62*24*60*60/routime_step #360*24*60*60/routime_step
@@ -29,7 +29,7 @@ save = 0
 show = 1
 
 fileNamesBase = 'trial2_' + objType + '_' + storm + '_' + hierarchyOpt + '_' + ISD_arrangement + '_flood_short'
-fileNamesBase = 'test_both_6'
+fileNamesBase = 'test_' + objType + '_final_short'
 
 if hierarchyOpt == 'NH':
     hierarchy = 0

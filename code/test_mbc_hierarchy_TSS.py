@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import swmmAPI as swmm
 
 # Enter 1 to include no control simulation and 0 otherwise
-noControl = 1
+noControl = 0
 # Enter 1 to include control simulation and 0 otherwise
 control = 1
 
@@ -32,10 +32,10 @@ weights = {'beta': 1.0,
     'epsilon_TSS': 0.0
     }
 saveNames = ['trial2_TSS_201701_NH_A_flood_short']
-saveNames = ['test_both_final_short']
+saveNames = ['test_both_final_N100']
 saveType = "numpy" # or "pickle"
-eps_flows = [1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
-eps_TSS = [1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
+eps_flows = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
+eps_TSS = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
 # Counter for saving results (starts at counter+1)
 counter = 0
 
@@ -67,7 +67,7 @@ headers = ['[TITLE]','[OPTIONS]','[EVAPORATION]','[RAINGAGES]','[SUBCATCHMENTS]'
     '[VERTICES]','[Polygons]','[SYMBOLS]','[PROFILES]']
 # Enter .inp file name and location
 inpF = "../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows_201701_timesteps.inp"
-timesteps = 62*24*60*60/10 #365*24*60*60/10
+timesteps = 365*24*60*60/10 #62*24*60*60/10 #
 # Sections and dictionaries generated for SWMM attributes;
 # used for pulling parameters and states
 sections = swmm.make_sections(inpF,headers)

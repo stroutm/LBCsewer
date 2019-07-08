@@ -3,7 +3,7 @@ import numpy as np
 
 # Enter result file information
 storm = '201701'
-objType = 'flow'
+objType = 'both'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A_flood_short'
 # Trial number range
@@ -13,7 +13,7 @@ routime_step = 10 # seconds
 # Timestep range
 timeBegin = 2*24*60*60/routime_step # start 2 days in
 if storm == '201701':
-    timeEnd = 62*24*60*60/routime_step #365*24*60*60/routime_step #
+    timeEnd = 365*24*60*60/routime_step #62*24*60*60/routime_step #
 elif storm == '201806':
     timeEnd = 259200
 saveType = "numpy" # "numpy" or "pickle"
@@ -26,7 +26,7 @@ if saveType == "pickle":
     fileName = 'trial_' + objType + '_' + storm + '_NH_' + ISD_arrangement + '.pkl'
 elif saveType == "numpy":
     fileName = 'trial2_' + objType + '_' + storm + '_NH_' + ISD_arrangement + '.npy'
-    fileName = 'test_' + objType + '_final_short.npy'
+    fileName = 'test_' + objType + '_final_N.npy'
 
 # Loads and stores no control results as workspace variables
 if saveType == "pickle":
@@ -135,7 +135,7 @@ summ_NC[0,15] = TSSVar_NC
 summ_NC[0,16] = no_control_res['flooding']
 
 # Save summary array of no-control performance metrics in a compliation .csv file
-saveFileName_NC = '../data/results/no_control/resultSumm_' + storm + '_short.csv'
+saveFileName_NC = '../data/results/no_control/resultSumm_' + storm + '_N.csv'
 np.savetxt(saveFileName_NC, summ_NC, delimiter=",")
 
 # Initializes summary array for performance metrics
@@ -149,7 +149,7 @@ for i in range(noRangeBegin,noRangeEnd):
         fileName = 'trial_' + objType + '_' + storm + '_NH_' + ISD_arrangement + '_' + "%02d" % (i) + '.pkl'
     elif saveType == "numpy":
         fileName = 'trial2_' + objType + '_' + storm + '_NH_' + ISD_arrangement + '_' + "%02d" % (i) + '.npy'
-        fileName = 'test_' + objType + '_final_' + "%02d" % (i) + '.npy'
+        fileName = 'test_' + objType + '_final_N100_' + "%02d" % (i) + '.npy'
 
     n_trunkline = 3
     if ISD_arrangement == 'A':
@@ -382,7 +382,7 @@ for i in range(noRangeBegin,noRangeEnd):
 
     # Save summary array of performance metrics after each control simulation in
     # a compliation .csv file
-    saveFileName = '../data/results/control/resultSumm_' + objType + '_' + storm + '_short.csv'
+    saveFileName = '../data/results/control/resultSumm_' + objType + '_' + storm + '_N100.csv'
     np.savetxt(saveFileName, summ, delimiter=",")
     
     del control_res_load, control_res, timeOverFlowSetpt, timeOverTSSLSetpt

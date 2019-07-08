@@ -88,7 +88,7 @@ def mbc(ustream, dstream, setpts, uparam, dparam, n_tanks, action, discharge, ma
     alpha = uparam*np.ones(n_tanks)
     beta = np.zeros(n_tanks)
     betamax = 2
-    N = 1 #TESTING
+    N = 100 #TESTING
     #ORIGINAL.0 uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
         #ORINGAL.1 beta[i] = alpha[i] * (1+ustream[i])
@@ -172,7 +172,7 @@ def mbc_multi(ustream, dstream, setpts, uparam, dparam, n_tanks, action, dischar
     alpha = uparam*np.ones(n_tanks)
     beta = np.zeros(n_tanks)
     betamax = 2
-    N = 1 #TESTING
+    N = 100 #TESTING
     #ORIGINAL.0 uparam = uparam*np.ones(n_tanks)
     for i in range(0,n_tanks):
         #ORIGINAL.1 beta[i] = alpha[i] * (1+ustream[i])
