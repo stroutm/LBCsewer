@@ -14,13 +14,9 @@ control = 1
 
 ## Simulation parameters
 # Enter ISDs to use for MBC; elements should be from {2,3,4}U{6,...,13}
-#ISDs = [11,6,2]; n_ISDs = [1,1,1]
-#ISDs = [13,12,6,4,3]; n_ISDs = [2,1,2]
 ISDs = [13,12,11,10,9,8,7,6,4,3,2]; n_ISDs = [3,5,3]
 # Enter number of main trunkline branches
 n_trunkline = 3
-# Enter array with number of ISDs along each main trunkline branch, from most
-# upstream branch to most downstream
 
 ## Weighting parameters
 # Enter weighting parameters:
@@ -31,11 +27,11 @@ weights = {'beta': 1.0,
     # epsilon_TSS: downstream WRRF TSS objective
     'epsilon_TSS': 0.0
     }
+eps_flows = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
+eps_TSS = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
 saveNames = ['trial2_TSS_201701_NH_A_flood_short']
 saveNames = ['test_both_final_N100']
 saveType = "numpy" # or "pickle"
-eps_flows = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
-eps_TSS = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
 # Counter for saving results (starts at counter+1)
 counter = 0
 
@@ -48,8 +44,8 @@ ctrlParams = {'setptThres': 1,
     'objType': 'both',
     # For setpt_WRRF_flow and setpt_WRRF_TSS, enter downstram flow and TSS
     # setpoints, respectively, normalized to no control simulation results
-    'setpt_WRRF_flow': 2.5, #0.25, #1.1, #0.144154, #0.7,
-    'setpt_WRRF_TSS': 2.5, #1.0,
+    'setpt_WRRF_flow': 2.5,
+    'setpt_WRRF_TSS': 2.5,
     # For contType, enter 'binary' for {0,1} gate openings or 'continuous' for [0,1]
     'contType': 'continuous',
     # For hierarchy, enter 1 to have separate markets in each branch or 0 to
@@ -67,7 +63,7 @@ headers = ['[TITLE]','[OPTIONS]','[EVAPORATION]','[RAINGAGES]','[SUBCATCHMENTS]'
     '[VERTICES]','[Polygons]','[SYMBOLS]','[PROFILES]']
 # Enter .inp file name and location
 inpF = "../data/input_files/GDRSS/GDRSS_SCT_simple_ISDs_TSS_inflows_201701_timesteps.inp"
-timesteps = 365*24*60*60/10 #62*24*60*60/10 #
+timesteps = 365*24*60*60/10 #62*24*60*60/10
 # Sections and dictionaries generated for SWMM attributes;
 # used for pulling parameters and states
 sections = swmm.make_sections(inpF,headers)
@@ -119,26 +115,13 @@ sysSpecs['control_step'] = 15*60/sysSpecs['routime_step']
 # Creates environment for running simulation and getting/setting parameters
 # and states
 env = Env(inpF)
-# Enter 1 if .inp file has wet weather; 0 otherwise;
-# only influences max values set below if noControl == 0 for testing storm
-wetWeather = 1
-# Variables in maxes will be recalculated using no control simulation results
+
+# Variables in maxes will be calculated using no control simulation results
 # if noControl == 1
-if wetWeather == 1:
-    # For max_flow_WRRF, enter no control simulation WRRF flow peak
-    maxes = {'max_flow_WRRF': 3254.,
-    # For max_flow_dstream, enter no control simulaiton flow peaks for each branch
-    'max_flow_dstream': [1152.,1295.,2798.],
-    # For max_TSSLoad_WRRF, enter no control simulation WRRF TSS load peak
-    'max_TSSLoad_WRRF': 10.9661,
-    # For max_TSSLoad_dstream, enter no control simulation TSS load peaks for each branch
-    'max_TSSLoad_dstream': [5.125,3.6348,6.3125]
-    }
-else:
-    maxes = {'max_flow_WRRF': 223.275,
-    'max_flow_dstream': [93.7,49.75,75.22],
-    'max_TSSLoad_WRRF': 2.3675,
-    'max_TSSLoad_dstream': [0.8421,0.5240,1.0090]
+maxes = {'max_flow_WRRF': 0.,
+    'max_flow_dstream': [0., 0., 0.],
+    'max_TSSLoad_WRRF': 0.,
+    'max_TSSLoad_dstream': [0., 0., 0.]
     }
 
 ## Saving and plotting specifications
@@ -161,10 +144,10 @@ if noControl == 1:
     # Runs simulation for no control case
     time, ustream_depths, dstream_flows, max_flow_dstream, dstream_TSSLoad, max_TSSLoad_dstream, WRRF_flow, max_flow_WRRF, WRRF_TSSLoad, max_TSSLoad_WRRF, stats = simulation_noControl(env, n_trunkline, sysSpecs, timesteps)
 
-    maxes = {'max_flow_WRRF': max_flow_WRRF, 'max_flow_dstream': max_flow_dstream,
-                'max_TSSLoad_WRRF': max_TSSLoad_WRRF, 'max_TSSLoad_dstream': max_TSSLoad_dstream}
-    maxes = {'max_flow_WRRF': 222.3, 'max_flow_dstream': max_flow_dstream,
-                'max_TSSLoad_WRRF': 2.3165, 'max_TSSLoad_dstream': max_TSSLoad_dstream}
+    maxes['max_flow_dstream'] = max_flow_dstream
+    maxes['max_TSSLoad_dstream'] = max_TSSLoad_dstream
+    maxes['max_flow_WRRF'] = max_flow_WRRF
+    maxes['max_TSSLoad_WRRF'] = max_TSSLoad_WRRF
 
     # Prints cumulative TSS load at WRRF
     print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
