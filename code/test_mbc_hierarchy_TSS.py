@@ -1,5 +1,5 @@
 from environment_mbc_wq import Env
-from mbc_simulation import simulation_noControl, simulation_control, simulation_control_propRelease
+from mbc_simulation import simulation_noControl, simulation_control
 from plot_fn import plot_noControl, plot_control, plot_finish
 from GDRSS_fn import GDRSS_build
 import numpy as np
@@ -188,7 +188,7 @@ if noControl == 1:
 
 maxes['max_flow_WRRF'] = 222.3
 maxes['max_TSSLoad_WRRF'] = 2.3165
-        
+
 if control == 1:
     for q in range(0,len(eps_flows)):
         weights['epsilon_flow'] = eps_flows[q]
@@ -199,7 +199,6 @@ if control == 1:
 
             # Runs simulation for MBC case
             time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams, stats = simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes, timesteps)
-            #time_state, time_control, ustream_depths, dstream_flows, WRRF_flow, WRRF_TSSLoad, price, demands, gates, setpts_all, ctrlParams = simulation_control_propRelease(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes, timesteps)
 
             # Prints cumulative TSS load at WRRF
             print('Sum of WRRF_TSSLoad: ' + '%.2f' % sum(WRRF_TSSLoad))
