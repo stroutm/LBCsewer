@@ -29,7 +29,6 @@ weights = {'beta': 1.0,
     }
 eps_flows = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
 eps_TSS = [5.]#[1.,2.5,5.,7.5,10.,12.5,15.,17.5,20.]
-saveNames = ['trial2_TSS_201701_NH_A_flood_short']
 saveNames = ['test_both_final_N100']
 saveType = "numpy" # or "pickle"
 # Counter for saving results (starts at counter+1)
