@@ -3,6 +3,7 @@ import copy
 from mbc_fn import mbc, mbc_multi, mbc_noaction, mbc_noaction_multi
 
 def simulation_noControl(env, n_trunkline, sysSpecs, timesteps):
+    # Initialize variable logs
     done = False; j = 0
     time = np.zeros((timesteps,1),np.float16)
     ustream_depths = np.zeros((timesteps,len(sysSpecs['ustreamConduits'])),np.float16)
@@ -11,11 +12,9 @@ def simulation_noControl(env, n_trunkline, sysSpecs, timesteps):
     WRRF_flow = np.zeros((timesteps,1),float)
     WRRF_TSS = np.zeros((timesteps,1),float)
     WRRF_TSSLoad = np.zeros((timesteps,1),float)
+
+    # Step through simultation and log variables
     while (not done) and (j < timesteps):
-        #ADDED TO CHECK
-        #if j > 40 and j < 50:
-        #    print(j)
-        #    print(env.get_pollutant_node('2355'))
         time[j] = j/(24.*60*60/sysSpecs['routime_step'])
         for e in range(0,len(sysSpecs['ustreamConduits'])):
             ustream_depths[j,e] = env.depthL(sysSpecs['ustreamConduits'][e])/sysSpecs['max_depths'][e]
@@ -41,6 +40,8 @@ def simulation_noControl(env, n_trunkline, sysSpecs, timesteps):
 
 def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, orificeDict, maxes, timesteps):
     env.reset()
+
+    # Initialize variable logs
     done = False; j = 0
     time_state = np.zeros((timesteps,1),np.float16)
     time_control = np.empty((0,1),np.float16)
@@ -52,7 +53,10 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
     action = np.hstack((np.ones(sum(n_ISDs)),np.zeros(sum(n_ISDs))))
     gates = np.zeros((timesteps,2*sum(n_ISDs)),np.float16)
 
+    # Step through simultation and log variables
     while (not done) and (j < timesteps):
+
+        # If not a control step, linearly interpolate gate action
         if j%sysSpecs['control_step'] != 0:
             if ctrlParams['hierarchy'] == 1:
                 time_state[j] = j/(24.*60*60/sysSpecs['routime_step'])
@@ -104,6 +108,7 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
                     env.set_gate(sysSpecs['control_points'][b], actCurr[b])
                     env.set_gate(sysSpecs['control_points'][sum(n_ISDs)+b], actCurr[sum(n_ISDs)+b])
 
+        # If a control step, use load balancing to determine necessary gate action
         else:
             time_state[j] = j/(24.*60*60/sysSpecs['routime_step'])
             time_control = np.vstack((time_control,j/(24.*60*60/sysSpecs['routime_step'])))
@@ -238,28 +243,21 @@ def simulation_control(env, n_trunkline, n_ISDs, ctrlParams, sysSpecs, weights, 
                     ustream_node_depths[b] = env.depthN(orificeDict[sysSpecs['control_points'][b]]['from_node'])
                     dstream_node_depths[b] = env.depthN(orificeDict[sysSpecs['control_points'][sum(n_ISDs)+b]]['to_node'])
                     ustream_node_TSSConc[b] = env.get_pollutant_node(orificeDict[sysSpecs['control_points'][b]]['from_node'])
-                    #ADDED TO CHECK
                     if ustream_node_TSSConc[b] < 0.01:
                         ustream_node_TSSConc[b] = 0.01
-                #ADDED TO CHECK
-                #print(orificeDict[sysSpecs['control_points'][0]]['from_node'])
                 ustream = storage_depths/sysSpecs['max_depths']
                 if ctrlParams['objType'] == "flow":
                     WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
                     dstream = np.array([WRRF_flow_tmp/maxes['max_flow_WRRF']])
-                    #dstream = np.array([WRRF_flow_tmp])
                     dparam = weights['epsilon_flow']
                     setpt = np.array([ctrlParams['setpt_WRRF_flow']])
-                    #setpt = np.array([ctrlParams['setpt_WRRF_flow']*maxes['max_flow_WRRF']])
                 elif ctrlParams['objType'] == "TSS":
                     WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
                     WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
                     WRRF_TSSLoad_tmp = WRRF_flow_tmp * WRRF_TSS_tmp * 0.000062428
                     dstream = np.array([WRRF_TSSLoad_tmp/maxes['max_TSSLoad_WRRF']])
-                    #dstream = np.array([WRRF_TSSLoad_tmp])
                     dparam = weights['epsilon_TSS']
                     setpt = np.array([ctrlParams['setpt_WRRF_TSS']])
-                    #setpt = np.array([ctrlParams['setpt_WRRF_TSS']*maxes['max_TSSLoad_WRRF']])
                 elif ctrlParams['objType'] == "both":
                     WRRF_flow_tmp = env.flow(sysSpecs['WRRFConduit'])
                     WRRF_TSS_tmp = env.get_pollutant_link(sysSpecs['WRRFConduit'])
