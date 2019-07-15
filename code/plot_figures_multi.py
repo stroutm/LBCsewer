@@ -10,11 +10,11 @@ control = 1
 
 routime_step = 10 # number of seconds between samples
 storm = '201701'
-objType = 'TSS'
+objType = 'both'
 hierarchyOpt = 'NH'
 ISD_arrangement = 'A'
-noRangeBegin = 5
-noRangeEnd = 6
+noRangeBegin = 1
+noRangeEnd = 2
 if storm == '201701':
     timeBegin = 2*24*60*60/routime_step #7*24*60*60/routime_step
     timeEnd = 62*24*60*60/routime_step #360*24*60*60/routime_step
@@ -29,7 +29,7 @@ save = 0
 show = 1
 
 fileNamesBase = 'trial2_' + objType + '_' + storm + '_' + hierarchyOpt + '_' + ISD_arrangement + '_flood_short'
-fileNamesBase = 'test_' + objType + '_final_short'
+fileNamesBase = 'test_' + objType + '_final_N100'
 
 if hierarchyOpt == 'NH':
     hierarchy = 0
@@ -123,18 +123,18 @@ for i in range(noRangeBegin,noRangeEnd):
             maxes['max_flow_dstream'] = stuff.item().get('max_flow_dstream')
             plt.figure(i)
             plot_control(n_trunkline, n_ISDs, ctrlParams, plotParams,
-                stuff.item().get('time_state')[timeBegin:timeEnd],
+                stuff.item().get('time_state')[timeBegin:timeEnd:200],
                 stuff.item().get('time_control'),
-                stuff.item().get('ustream_depths')[timeBegin:timeEnd],
-                stuff.item().get('WRRF_flow')[timeBegin:timeEnd],
-                stuff.item().get('WRRF_TSSLoad')[timeBegin:timeEnd],
-                stuff.item().get('dstream_flows')[timeBegin:timeEnd],
+                stuff.item().get('ustream_depths')[timeBegin:timeEnd:200],
+                stuff.item().get('WRRF_flow')[timeBegin:timeEnd:200],
+                stuff.item().get('WRRF_TSSLoad')[timeBegin:timeEnd:200],
+                stuff.item().get('dstream_flows')[timeBegin:timeEnd:200],
                 maxes, setpts_all, stuff.item().get('price'),
                 stuff.item().get('demands'),
-                stuff.item().get('gates')[timeBegin:timeEnd], timeBegin, timeEnd)
+                stuff.item().get('gates')[timeBegin:timeEnd:200], timeBegin, timeEnd)
 
     plot_finish(plotParams['normalize'], timeBegin, timeEnd, routime_step)
-    
+
     if saveType == "pickle":
         if (control == 1) and (objType == 'both'):
             plt.suptitle('beta = ' + str(weights['beta']) + ', eps_q = ' + str(weights['epsilon_flow']) + ', eps_TSS = ' + str(weights['epsilon_TSS']))
