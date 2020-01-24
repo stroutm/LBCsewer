@@ -11,3 +11,5 @@ We illustrate that this load-balancing approach can successfully attenuate wet-w
 The parameterization of the control algorithm is assessed in the context of competing objectives at the downstream WRRF and broader collection system (e.g. sediment loads, peak flows, flooding, and solids accumulation in the sewer system). 
 By applying this control algorithm and analysis to an established case study, we identify a range of parameter values that provide most desirable performance across a number of system-wide objectives. 
 Specifically, we discover a band of desirable performance, which not only improves inflow into the WRRF, but simultaneously reduces flooding and sedimentation in the collection system. 
+
+<img src="https://github.com/stroutm/LBCsewer/blob/master/images/LBCsummary.png" alt="LBCsummary" width="500"/>
