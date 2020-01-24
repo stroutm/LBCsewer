@@ -17,19 +17,19 @@ Specifically, we discover a band of desirable performance, which not only improv
 To use this algorithm, the following will have to be specified beforehand:
 
 | Item | Symbol | Description |
-|-----------|-----------|-----------|
-| A set of sewer assets | ![i\in I](https://latex.codecogs.com/gif.latex?i\in&space;I) | |
+|-----------|:-----------:|-----------|
+| A set of sewer assets | ![i\in I](https://latex.codecogs.com/gif.latex?i\in&space;I) | These can include e.g. storage basins with outlet valves and pump stations. |
 | States (e.g., water level) | ![S_{i}](https://latex.codecogs.com/gif.latex?S_{i}) | This can be a vector of multiple states for each asset ![i](https://latex.codecogs.com/gif.latex?i). |
 | Desired setpoints for each state | ![S_{i}^*](https://latex.codecogs.com/gif.latex?S_{i}^*) | Setpoints must be specified for each state in ![S_{i}](https://latex.codecogs.com/gif.latex?S_{i}). |
 | System importance values for each asset ![i](https://latex.codecogs.com/gif.latex?i) | ![\alpha_{i}](https://latex.codecogs.com/gif.latex?\alpha_{i}) | This can be used to specify which assets and states are most important within the system. The size of ![\alpha_{i}](https://latex.codecogs.com/gif.latex?\alpha_{i}) must match ![S_{i}](https://latex.codecogs.com/gif.latex?S_{i}). |
 | Instantaneous importance weight | ![\rho](https://latex.codecogs.com/gif.latex?\rho) | This parameter can be tuned to reflect how stressed an asset is at any given point in time. By analogy, ![\rho](https://latex.codecogs.com/gif.latex?\rho) could encapsulate the comfort level of an operator (e.g., release proportional to water level vs. prioritize an asset only if it is close to full). For example, if storage capacity is used as an indicator of importance, with ![\rho=1](https://latex.codecogs.com/gif.latex?\rho=1) the instantaneous importance of the asset increases nearly linearly with water level. With ![\rho=100](https://latex.codecogs.com/gif.latex?\rho=100) the asset would be considered important only if it is close to capacity. |
-| A set of assets that are controllable by the operator / system | ![I_{C}](https://latex.codecogs.com/gif.latex?I_{C}) | |
-| A set of assets that will remain uncontrolled or passively controlled | ![I_{U}](https://latex.codecogs.com/gif.latex?I_{U}) | |
+| A set of assets that are controllable by the operator / system | ![I_{C}](https://latex.codecogs.com/gif.latex?I_{C}) | This algorithm will inform control actions for these assets. |
+| A set of assets that will remain uncontrolled or passively controlled | ![I_{U}](https://latex.codecogs.com/gif.latex?I_{U}) | An example of what this set might contain is the downstream WRRF with states pertaining to inflow conditions. |
 
 Then for each time step ![t](https://latex.codecogs.com/gif.latex?t), the following are computed:
 
 | Item | Symbol | Description |
-|-----------|-----------|-----------|
+|-----------|:-----------:|-----------|
 | Instantaneous importance | ![\gamma_{i}](https://latex.codecogs.com/gif.latex?\gamma_{i}) | This is based on ![S_{i}](https://latex.codecogs.com/gif.latex?S_{i}) and ![\rho](https://latex.codecogs.com/gif.latex?\rho). In general, a higher state (e.g., water level) will result in a higher instantaneous importance. |
 | Overall importance | ![\beta_{i}](https://latex.codecogs.com/gif.latex?\beta_{i}) | This is a product of the system importance and instantaneous importance of asset ![i](https://latex.codecogs.com/gif.latex?i). |
 | Importance-weighted average | ![\bar{C}](https://latex.codecogs.com/gif.latex?\bar{C}) | This provides a basis for which to compare the relative stress of all assets in the system and is used to determined which assets release water during a particular time step. |
