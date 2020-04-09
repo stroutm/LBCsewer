@@ -2,7 +2,7 @@
 ### Balancing water quality and flows in combined sewer systems using real-time control
 Sara C. Troutman, Nancy G. Love, Branko Kerkez
 
-Publication DOI: [10.1016/j.watres.2017.08.065](https://doi.org/10.1016/j.watres.2017.08.065)
+Publication DOI: [10.1039/C9EW00882A](https://doi.org/10.1039/C9EW00882A)
 
 A new generation of smart and connected stormwater and sewer systems is being enabled by emerging wireless technologies and data algorithms. 
 Stormwater and combined sewer systems can be autonomously controlled (gates, valves, pumps) to allocate storage and adapt to changing inputs. 
