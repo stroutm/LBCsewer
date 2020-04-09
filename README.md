@@ -1,6 +1,6 @@
 ## Load-Balancing Control for Distributed Sewer Assets
 ### Balancing water quality and flows in combined sewer systems using real-time control
-Sara C. Troutman
+Sara C. Troutman, Nancy G. Love, Branko Kerkez
 
 Publication DOI: [10.1016/j.watres.2017.08.065](https://doi.org/10.1016/j.watres.2017.08.065)
 
